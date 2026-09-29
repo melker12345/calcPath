@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Renders a `:::figure` spec as inline SVG.
  *
@@ -7,9 +5,11 @@
  * the page — the reason figures are drawn rather than shipped as images. The
  * drawing area is a fixed viewBox with `width: 100%`, so it scales to the
  * column without the author thinking about pixels.
+ *
+ * A Server Component: no hooks, so the SVG is part of the static page. The
+ * caller passes `uid`, unique within the page, to namespace the marker ids.
  */
 
-import { useId } from "react";
 import {
   computeLayout,
   evaluateExpression,
@@ -26,8 +26,7 @@ import {
   type Point,
 } from "@/lib/content/figure-spec";
 
-export function Figure({ spec, alt }: { spec: FigureSpec; alt?: string }) {
-  const uid = useId().replace(/:/g, "");
+export function Figure({ spec, alt, uid }: { spec: FigureSpec; alt?: string; uid: string }) {
   const [x0, x1] = spec.x;
   const [y0, y1] = spec.y;
 

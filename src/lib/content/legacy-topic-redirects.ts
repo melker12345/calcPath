@@ -1,5 +1,12 @@
 import "server-only";
 
+/**
+ * RETIRED for chapter pages: the same JSON files now feed permanent redirects
+ * in next.config.ts at build time (chapters are static HTML, so nothing runs
+ * per request). Only the practice route still calls these helpers; once it
+ * moves to the next.config redirects too, delete this file.
+ */
+
 type LegacyTopicRedirect = {
   chapterId: string;
   section: string;

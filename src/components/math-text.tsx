@@ -4,6 +4,7 @@ import React, { Component, type ReactNode } from "react";
 import { InlineMath, BlockMath } from "react-katex";
 import "katex/dist/katex.min.css";
 import { normalizeMathText } from "@/lib/math-text-normalize";
+import { glueTrailingPunctuation, isTallInlineMath, splitMath } from "@/lib/math-split";
 
 type MathTextProps = {
   text: string;
@@ -11,105 +12,11 @@ type MathTextProps = {
 };
 
 /**
- * Detects "tall" inline math — LaTeX whose rendered height spans more than one
- * text row (multi-row matrices/vectors, arrays, cases, aligned blocks). KaTeX
- * inline math does NOT grow the surrounding line box for tall content, so such
- * expressions bleed into the line below (augmented matrices were overlapping the
- * following paragraph on mobile). We detect tallness straight from the source and
- * render those spans as a self-contained inline-block that owns its vertical space
- * and scrolls horizontally on narrow screens (see `.math-tall` in globals.css).
- *
- * Signals: a stacking environment (matrix family, array, cases, aligned, …) or a
- * literal `\\` row break (present in every multi-row matrix/vector/array).
+ * Client-side LaTeX rendering for the practice screens, where the text arrives
+ * in props and is typeset with react-katex. Chapters do not use this: they are
+ * rendered to HTML on the server (src/lib/content/render-math.ts) with the same
+ * splitter, so the two agree on where prose ends and mathematics begins.
  */
-const TALL_INLINE_MATH =
-  /\\begin\{(?:[pbvVB]?matrix\*?|smallmatrix|array|cases|aligned|gathered|split|align\*?)\}|\\\\/;
-
-export function isTallInlineMath(latex: string): boolean {
-  return TALL_INLINE_MATH.test(latex);
-}
-
-const splitMath = (text: string) => {
-  // Robust splitter: supports $...$ (inline) and $$...$$ (block). Handles \$ escapes.
-  // Post-processes for sentence spacing + anti-glue logic (see below).
-  const parts: Array<{ type: "text" | "math" | "blockmath"; value: string; trailing?: string; leading?: string }> = [];
-
-  // Regex matches opening $ or $$ not preceded by \, captures inner content up to unescaped closer.
-  // Uses [\s\S]*? non-greedy across lines.
-  const regex = /(?<!\\)(\$\$([\s\S]*?)(?<!\\)\$\$|\$([\s\S]*?)(?<!\\)\$)/g;
-
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
-
-  while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push({ type: "text", value: text.slice(lastIndex, match.index) });
-    }
-    const full = match[0];
-    if (full.startsWith("$$") && full.endsWith("$$")) {
-      const inner = match[2] ?? "";
-      parts.push({ type: "blockmath", value: inner });
-    } else {
-      const inner = match[3] ?? "";
-      parts.push({ type: "math", value: inner });
-    }
-    lastIndex = regex.lastIndex;
-  }
-  if (lastIndex < text.length) {
-    parts.push({ type: "text", value: text.slice(lastIndex) });
-  }
-
-  // Unescape any \$ that reached text parts (from original manual logic).
-  // Then apply sentence spacing fixes.
-  for (const part of parts) {
-    if (part.type === "text") {
-      part.value = part.value.replace(/\\\$/g, "$");
-      part.value = part.value.replace(/\.([A-Z])/g, ". $1");
-      part.value = part.value.replace(/!([A-Z])/g, "! $1");
-      part.value = part.value.replace(/\?([A-Z])/g, "? $1");
-    }
-  }
-
-  return parts;
-};
-
-// Glue trailing punctuation onto the preceding inline math span. KaTeX roots
-// are inline-block, which gives the browser a break opportunity right before
-// a following "." or ")," — stranding lone punctuation on the next line.
-// Moving the cluster into the math span's nowrap wrapper removes that break.
-// Inline rendering only: block mode renders math as display blocks, where the
-// punctuation belongs to the surrounding paragraph.
-const glueTrailingPunctuation = (parts: ReturnType<typeof splitMath>) => {
-  for (let i = 0; i < parts.length - 1; i++) {
-    const cur = parts[i];
-    const nxt = parts[i + 1];
-    if (cur.type !== "math" || nxt.type !== "text") continue;
-    const punct = nxt.value.match(/^[.,;:!?)\]}]+/)?.[0];
-    if (!punct) continue;
-    cur.trailing = punct;
-    nxt.value = nxt.value.slice(punct.length);
-  }
-
-  // A lone short connective between two formulas ("{cases}. Compute $\lim…$")
-  // must not be stranded at the end of a line away from the formula it
-  // introduces. Attach it to the following math span's nowrap wrapper. Only
-  // single words, and never before tall math — a .math-tall block manages its
-  // own width/scrolling and a nowrap prefix could push it past the container.
-  for (let i = 1; i < parts.length - 1; i++) {
-    const prev = parts[i - 1];
-    const cur = parts[i];
-    const nxt = parts[i + 1];
-    if (prev.type !== "math" || cur.type !== "text" || nxt.type !== "math") continue;
-    if (isTallInlineMath(nxt.value)) continue;
-    const word = cur.value.match(/^([.,;:!?)\]}]*)\s+([A-Za-z]{1,14})\s+$/);
-    if (!word) continue;
-    nxt.leading = `${word[2]} `;
-    cur.value = `${word[1]} `;
-  }
-
-  return parts;
-};
-
 // Local error boundary (no new files) so one bad LaTeX fragment in a practice question
 // (or any MathText use) does not crash the whole experience with generic "Something went wrong".
 // Graceful fallback: show raw source (amber highlighted) so user can still read/answer/navigate.

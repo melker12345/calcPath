@@ -1,64 +1,53 @@
-import { notFound, permanentRedirect } from "next/navigation";
-import { SubjectModulePage } from "@/components/subject-module-page";
-import type { ModuleContent } from "@/lib/modules";
-import type { Problem, Topic } from "@/lib/shared-types";
-import { getFileSystemContentBundle, loadSubjectIndex, requireSubjectConfig } from "@/lib/content/loader";
-import { getLegacyTopicRedirect } from "@/lib/content/legacy-topic-redirects";
-import { getSectionHref } from "@/lib/subject-urls";
-import { hasProblemSet } from "@/lib/content/problemset-loader";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { ChapterPage } from "@/components/chapter-page";
+import { listChapterParams, loadChapter } from "@/lib/content/chapter";
+import "katex/dist/katex.min.css";
 
 type Props = { params: Promise<{ subject: string; topicId: string }> };
 
-export default async function SubjectModulePageRoute({ params }: Props) {
+/**
+ * Every chapter is prerendered at build time from content/. A path that is
+ * not a chapter is a 404, never a server render.
+ */
+export const dynamicParams = false;
+
+export async function generateStaticParams() {
+  return listChapterParams();
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { subject: slug, topicId } = await params;
+  const chapter = await loadChapter(slug, topicId);
+  if (!chapter) return { title: "Not Found", robots: { index: false, follow: false } };
 
-  const legacy = await getLegacyTopicRedirect(slug, topicId);
-  if (legacy) {
-    // legacy.subject is set when the chapter moved to another subject, as when
-    // probability was split out of statistics; otherwise it moved within this one.
-    permanentRedirect(getSectionHref(legacy.subject ?? slug, legacy.chapterId, legacy.section));
-  }
-  let subjectLabel: string;
-  try {
-    const subject = await requireSubjectConfig(slug);
-    subjectLabel = subject.label;
-  } catch {
-    notFound();
-  }
+  const title = `${chapter.subject.label} — ${chapter.topic.title}`;
+  const description =
+    chapter.topic.description ||
+    `${chapter.topic.title}: definitions, theorems, worked examples and practice in ${chapter.subject.label}.`;
+  const canonical = `https://calc-path.com/${slug}/modules/${topicId}`;
+  return {
+    // The parent [subject] layout's title template appends " | CalcPath".
+    title,
+    description,
+    alternates: { canonical },
+    // Full openGraph block: metadata shallow-merge means a partial override
+    // would drop the root's images/siteName/type/locale entirely.
+    openGraph: {
+      title: `${title} | CalcPath`,
+      description,
+      url: canonical,
+      siteName: "CalcPath",
+      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "CalcPath — Learn math step by step" }],
+      type: "article",
+      locale: "en_US",
+    },
+  };
+}
 
-  // Only THIS chapter's prose crosses to the client. Handing the page every
-  // chapter of the subject put all of them in the RSC payload — the reader of
-  // one 11k-word chapter was downloading the other eleven too, which at
-  // textbook depth is megabytes of text they never see.
-  let modules: ModuleContent[] = [];
-  let topics: Topic[] = [];
-  let topicProblems: Problem[] = [];
-  try {
-    const { getLegacyModuleContentForTopic } = await import("@/lib/content/adapters");
-    const lessonModule = await getLegacyModuleContentForTopic(slug, topicId);
-    if (lessonModule) modules = [lessonModule];
-    // Titles and order only, for the chapter number and the prev/next links.
-    // The subject index carries exactly the Topic fields those need, with none
-    // of the chapter bodies.
-    const index = await loadSubjectIndex(slug);
-    topics = [...index.topics].sort((a, b) => a.order - b.order);
-    // Problems for this topic so the print button can offer a "Text + Questions"
-    // worksheet and render a print-only list of prompts.
-    const bundle = await getFileSystemContentBundle(slug);
-    topicProblems = bundle.problems.filter((p) => p.topicId === topicId);
-  } catch {
-    // will show not found in component; print gracefully falls back to text-only
-  }
-
-  return (
-    <SubjectModulePage
-      subjectSlug={slug}
-      subjectLabel={subjectLabel}
-      modules={modules}
-      topics={topics}
-      problems={topicProblems}
-      faqs={{}} // generic; per-topic faqs can be added later if needed
-      hasProblemSet={await hasProblemSet(slug, topicId)}
-    />
-  );
+export default async function ChapterRoute({ params }: Props) {
+  const { subject: slug, topicId } = await params;
+  const chapter = await loadChapter(slug, topicId);
+  if (!chapter) notFound();
+  return <ChapterPage chapter={chapter} />;
 }
