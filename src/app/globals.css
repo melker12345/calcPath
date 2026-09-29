@@ -1,17 +1,35 @@
+/* ============================================================================
+   CalcPath — global stylesheet
+
+   Sections, in order:
+     1. Tokens (light / dark)
+     2. Base elements
+     3. Theme utility classes
+     4. Buttons and forms
+     5. Header / nav tint hooks
+     6. Chapters (book typography, environments, mathematics)
+     7. Figures
+     8. Practice / math input
+     9. Problem sheets
+    10. Print
+
+   Rules: tokens only (no raw palette colours), no radius, no shadows, no
+   transitions or animations. Anything decorative belongs nowhere here.
+   Tailwind utilities are layered; every rule in this file is unlayered and
+   therefore wins over a utility of any specificity, so `!important` is only
+   used where two unlayered rules compete (print, MathQuill's injected CSS).
+   ============================================================================ */
 
 @import "tailwindcss";
 
-/* ============================================
-   THEME SYSTEM
-   Default = Light (clean white)
-   .dark   = GitHub Dark
-   ============================================ */
+/* ============================================================================
+   1. Tokens
+   ============================================================================ */
 
 :root {
-  /* === Light Theme (Default) === */
   --bg: #ffffff;
   --surface: #ffffff;
-  /* Always-opaque surface for nav/dropdown. */
+  /* Always-opaque surface for the sticky header and its dropdowns. */
   --surface-solid: var(--surface);
   --surface-2: #f8f9fa;
 
@@ -22,15 +40,13 @@
   --border: #e5e7eb;
 
   --accent: #0969da;
-  --accent-text: #ffffff;     /* Text that sits on the accent color */
+  --accent-text: #ffffff; /* text that sits on the accent colour */
 
-  /* Legacy fallbacks (being phased out) */
-  --background: #ffffff;
-  --foreground: #111111;
+  /* The pitfall aside's margin rule and the marker for a formula KaTeX refused. */
+  --warn: #d97706;
 }
 
 .dark {
-  /* === Dark Theme (GitHub Dark) === */
   --bg: #0d1117;
   --surface: #161b22;
   --surface-2: #21262d;
@@ -43,30 +59,23 @@
 
   --accent: #58a6ff;
   --accent-text: #0d1117;
+
+  --warn: #f59e0b;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-serif: ui-serif, Georgia, "Times New Roman", Times, serif;
-  --font-serif-display: var(--font-serif);
-  --font-serif-body: var(--font-serif);
 }
 
-/* Force Tailwind to use class-based dark mode (controlled by next-themes)
-   instead of the default prefers-color-scheme media query.
-   This makes .dark\:bg-\[var\(--surface\)\] etc. work based on the .dark class. */
+/* Class-based dark mode, driven by next-themes, instead of the media query. */
 @variant dark (&:where(.dark, .dark *));
 
-/* Safety net: ensure arbitrary dark background utilities always use our CSS variables
-   when the .dark class is present (overrides any media-query versions Tailwind may have emitted). */
-.dark .dark\:bg-\[var\(--surface\)\] {
-  background-color: var(--surface) !important;
-}
-.dark .dark\:bg-\[var\(--surface-2\)\] {
-  background-color: var(--surface-2) !important;
-}
+/* ============================================================================
+   2. Base elements
+   In @layer base so that a utility class on an element (p-0, border-none on
+   the search field) can still override these defaults.
+   ============================================================================ */
 
 body {
   background: var(--bg);
@@ -75,31 +84,60 @@ body {
   font-size: 18px;
   line-height: 1.65;
   font-weight: 400;
-  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* ============================================
-   THEME AWARE BASE STYLES
-   Preferred styling approach (unified style):
+@layer base {
+  a:hover {
+    text-decoration: underline;
+  }
 
-   1. Use semantic .theme-* classes for most UI:
-      - .theme-surface / .theme-bg
-      - .theme-border
-      - .theme-text / .theme-text-secondary / .theme-text-muted
-      - .theme-card / .theme-card-light (for cards that need visual separation in light mode)
+  table {
+    border-collapse: collapse;
+  }
 
-   2. For accent colors use CSS variables directly:
-      - bg-[var(--accent)], text-[var(--accent)], border-[var(--border)]
+  table th {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
 
-   3. Use dark: variants sparingly — mainly for light-mode-specific tweaks
-      (e.g. bg-zinc-100 dark:bg-[var(--surface)] )
+  input,
+  textarea,
+  select {
+    color: inherit;
+  }
 
-   4. Minimize raw Tailwind colors (bg-white, text-stone-*, border-stone-*)
-      unless they have proper dark: counterparts.
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="search"],
+  textarea,
+  select {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 0.55rem 0.75rem;
+  }
 
-   Goal: One consistent, maintainable pattern across the whole app.
-   The global forcing layer below is a temporary safety net only.
-   ============================================ */
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--text-muted);
+  }
+
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible,
+  button:focus-visible,
+  a:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+}
+
+/* ============================================================================
+   3. Theme utility classes
+   ============================================================================ */
 
 .theme-bg {
   background-color: var(--bg);
@@ -107,6 +145,10 @@ body {
 
 .theme-surface {
   background-color: var(--surface);
+}
+
+.theme-border {
+  border-color: var(--border);
 }
 
 .theme-text {
@@ -121,566 +163,71 @@ body {
   color: var(--text-muted);
 }
 
-/* Clean tables rendered by MdxContent (markdown | tables in module.mdx) */
-table {
-  border-collapse: collapse;
-}
-table th {
-  color: var(--text-primary);
-  font-weight: 600;
-}
+/* ============================================================================
+   4. Buttons
+   ============================================================================ */
 
-/* Card-like containers (recommended pattern) */
-.theme-card {
-  background-color: var(--surface);
-  border-color: var(--border);
-}
-
-/* Subtle background for light mode cards that need separation */
-.theme-card-light {
-  /* Subtle separation in light mode (better than pure white when body is #fff) */
-  background-color: #f4f4f5; /* zinc-100 */
-}
-
-.dark .theme-card-light {
-  background-color: var(--surface);
-}
-
-.theme-border {
-  border-color: var(--border);
-}
-
-/* Semantic buttons - these are the recommended ones to use.
-   (.btn-primary is defined once, further down, with the accent tokens.) */
-
+.btn-primary,
 .btn-secondary {
-  background-color: var(--surface);
-  border-color: var(--border);
-  color: var(--text-primary);
-}
-
-/* ============================================
-   TRANSITIONAL FORCING (temporary bridge)
-   ============================================ */
-
-.dark .bg-\[#f7f7f2\],
-.dark .bg-stone-50,
-.dark .bg-stone-100,
-.dark .bg-\[#EFEFEF\] {
-  background-color: var(--bg) !important;
-}
-
-.dark .bg-white {
-  background-color: var(--surface) !important;
-}
-
-/* Warm off-white cards and example blocks used in modules */
-.dark .bg-\[#fffef8\] {
-  background-color: var(--surface) !important;
-}
-
-/* Slate light backgrounds used for badges, steps, etc. */
-.dark .bg-slate-100,
-.dark .bg-slate-50,
-.dark .bg-zinc-50,
-.dark .bg-zinc-100,
-.dark .hover\:bg-stone-100:hover {
-  background-color: var(--surface-2) !important;
-}
-
-/* Text forcing */
-.dark .text-stone-950,
-.dark .text-stone-900,
-.dark .text-zinc-900,
-.dark .text-black,
-.dark .text-slate-900,
-.dark .text-slate-950 {
-  color: var(--text-primary) !important;
-}
-
-.dark .text-stone-700,
-.dark .text-zinc-700,
-.dark .text-stone-800 {
-  color: var(--text-secondary) !important;
-}
-
-.dark .text-stone-500,
-.dark .text-stone-600,
-.dark .text-zinc-500,
-.dark .text-zinc-600,
-.dark .text-zinc-400,
-.dark .text-zinc-800,
-.dark .text-slate-500,
-.dark .text-slate-600 {
-  color: var(--text-muted) !important;
-}
-
-/* Blue elements (hints, "back" links, notes, etc.) */
-.dark .text-blue-800,
-.dark .text-blue-700,
-.dark .text-blue-600,
-.dark .text-blue-900,
-.dark .text-blue-950 {
-  color: var(--accent) !important;
-}
-
-/* Light blue callout/note boxes (ELI5, etc.) in dark mode */
-.dark .bg-blue-50 {
-  background-color: var(--surface-2) !important;
-}
-.dark .border-blue-200 {
-  border-color: var(--border) !important;
-}
-
-.dark .text-blue-800:hover,
-.dark .text-blue-700:hover {
-  filter: brightness(1.15);
-}
-
-/* === High-contrast dark theme treatment for module content sections === */
-/* "Explain it simply" callouts, worked examples, and practice problem cards */
-
-.dark .module-callout {
-  background-color: var(--surface-2) !important;
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--border)) !important;
-}
-
-.dark .module-callout summary {
-  color: var(--accent) !important;
-}
-
-.dark .module-callout summary:hover {
-  background-color: color-mix(in srgb, var(--accent) 8%, transparent) !important;
-}
-
-.dark .module-callout .note-label {
-  color: color-mix(in srgb, var(--accent) 85%, white) !important;
-}
-
-.dark .example-card,
-.dark .practice-card {
-  background-color: var(--surface) !important;
-  border-color: var(--border) !important;
-}
-
-.dark .example-badge,
-.dark .problem-badge {
-  background-color: var(--surface-2) !important;
-  color: var(--text-muted) !important;
-  border-color: var(--border) !important;
-}
-
-.dark .solution-box {
-  background-color: var(--bg) !important;
-  border-color: var(--border) !important;
-}
-
-.dark .final-answer {
-  background-color: var(--surface-2) !important;
-  border-color: var(--border) !important;
-}
-
-.dark .step-number {
-  background-color: var(--surface-2) !important;
-  color: var(--text-muted) !important;
-}
-
-.dark .example-body,
-.dark .solution-body {
-  color: var(--text-secondary) !important;
-}
-
-/* === VoteFeedback / Report forms === */
-/* Fix light mode textarea looking dark + good dark support */
-.feedback-textarea,
-.feedback-select {
-  background-color: #f9fafb !important; /* light zinc-50 equivalent */
-  border-color: #e5e7eb !important;
-  color: #111827 !important;
-}
-
-.dark .feedback-textarea,
-.dark .feedback-select {
-  background-color: var(--surface-2) !important;
-  border-color: var(--border) !important;
-  color: var(--text-primary) !important;
-}
-
-.dark .feedback-textarea:focus,
-.dark .feedback-select:focus {
-  background-color: var(--surface) !important;
-}
-
-/* === FAQ + Prev/Next navigation cards === */
-.dark .faq-item {
-  background-color: var(--surface) !important;
-  border-color: var(--border) !important;
-}
-
-.dark .faq-item summary {
-  color: var(--text-primary) !important;
-}
-
-.dark .faq-heading {
-  color: var(--text-primary) !important;
-}
-
-.dark .faq-answer {
-  color: var(--text-secondary) !important;
-}
-
-.dark .nav-card {
-  background-color: var(--surface) !important;
-  border-color: var(--border) !important;
-}
-
-.dark .nav-card .nav-label {
-  color: var(--text-muted) !important;
-}
-
-.dark .nav-card .nav-title {
-  color: var(--text-primary) !important;
-}
-
-.dark .nav-card .nav-desc {
-  color: var(--text-secondary) !important;
-}
-
-.dark .nav-card .nav-arrow {
-  background-color: var(--surface-2) !important;
-  color: var(--text-muted) !important;
-}
-
-.dark .nav-card:hover .nav-arrow {
-  background-color: var(--surface) !important;
-}
-
-/* === Print button + print dropdown modal === */
-.print-button {
-  /* light mode stays as authored */
-}
-
-.dark .print-button {
-  background-color: var(--surface) !important;
-  border-color: var(--border) !important;
-  color: var(--text-secondary) !important;
-}
-
-.dark .print-button:hover {
-  background-color: var(--surface-2) !important;
-  color: var(--text-primary) !important;
-}
-
-/* Print dropdown menu */
-.print-modal {
-  /* light mode stays as authored */
-}
-
-.dark .print-modal {
-  background-color: var(--surface) !important;
-  border-color: var(--border) !important;
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.3) !important;
-}
-
-.dark .print-modal p,
-.dark .print-modal .text-zinc-500,
-.dark .print-modal .text-slate-500 {
-  color: var(--text-muted) !important;
-}
-
-.dark .print-modal .text-zinc-700 {
-  color: var(--text-secondary) !important;
-}
-
-.dark .print-modal button {
-  color: var(--text-secondary) !important;
-}
-
-.dark .print-modal button:hover {
-  background-color: var(--surface-2) !important;
-  color: var(--text-primary) !important;
-}
-
-.dark .print-modal .bg-slate-100 {
-  background-color: var(--surface-2) !important;
-  color: var(--text-muted) !important;
-}
-
-.dark .print-modal .hover\:bg-slate-50:hover {
-  background-color: var(--surface-2) !important;
-}
-
-.dark .print-modal .hover\:text-slate-900:hover {
-  color: var(--text-primary) !important;
-}
-
-/* MathInput hint button in dark */
-.dark .math-input-hint-button {
-  background-color: rgba(33, 38, 45, 0.8) !important;
-  color: #8b949e !important;
-}
-
-.dark .math-input-hint-button:hover {
-  background-color: #21262d !important;
-  color: #d0d7de !important;
-}
-
-/* Border forcing for module pages and similar */
-.dark .border-stone-300,
-.dark .border-stone-200,
-.dark .border-stone-400,
-.dark .border-slate-200,
-.dark .border-slate-300,
-.dark .border-zinc-200,
-.dark .divide-stone-300 {
-  border-color: var(--border) !important;
-}
-
-/* ── Correct answer celebration ── */
-@keyframes correct-pop {
-  0% { opacity: 0; transform: translateY(12px) scale(0.97); }
-  60% { opacity: 1; transform: translateY(-2px) scale(1.005); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes check-bounce {
-  0% { transform: scale(0); }
-  50% { transform: scale(1.25); }
-  70% { transform: scale(0.9); }
-  100% { transform: scale(1); }
-}
-@keyframes step-in {
-  from { opacity: 0; transform: translateX(-8px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.animate-correct-pop {
-  animation: correct-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.animate-check-bounce {
-  animation: check-bounce 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
-}
-.animate-step-in {
-  animation: step-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-/* ── Landing page editorial animations ── */
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(24px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes rule-expand {
-  from { transform: scaleX(0); }
-  to { transform: scaleX(1); }
-}
-@keyframes number-reveal {
-  from { opacity: 0; transform: translateX(-12px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.animate-fade-up {
-  animation: fade-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-.animate-fade-in {
-  animation: fade-in 0.7s ease both;
-}
-.animate-rule-expand {
-  animation: rule-expand 1s cubic-bezier(0.22, 1, 0.36, 1) both;
-  transform-origin: left;
-}
-.animate-number-reveal {
-  animation: number-reveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-/* Stagger delays */
-.delay-100 { animation-delay: 0.1s; }
-.delay-200 { animation-delay: 0.2s; }
-.delay-300 { animation-delay: 0.3s; }
-.delay-400 { animation-delay: 0.4s; }
-.delay-500 { animation-delay: 0.5s; }
-.delay-600 { animation-delay: 0.6s; }
-.delay-700 { animation-delay: 0.7s; }
-.delay-800 { animation-delay: 0.8s; }
-.delay-1000 { animation-delay: 1.0s; }
-
-input,
-textarea,
-select {
-  color: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  padding: 0.5rem 1.1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-decoration: none;
 }
 
 .btn-primary {
-  @apply rounded-xl px-5 py-2.5 text-sm font-semibold shadow-sm transition hover:opacity-90;
   background-color: var(--accent);
+  border-color: var(--accent);
   color: var(--accent-text);
 }
 
 .btn-secondary {
-  @apply rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 dark:border-white/15 dark:bg-[#18181b] dark:text-[#ededed] dark:hover:bg-[#27272a];
-}
-
-/* Strip MathQuill's default focus border */
-.mq-editable-field.mq-focused,
-.mq-editable-field:focus {
-  border: none !important;
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-.katex {
-  font-size: 1em;
-}
-
-/* NOTE: never re-add `.katex .sizeN { font-size: … }` overrides here. They
-   match KaTeX's internal spans — .delimsizing.size1–4 pick larger *fonts* at
-   1em, and .sizing/reset-* set their own sizes — so a font-size override
-   inflates glyphs (e.g. the tall { of \begin{cases}) beyond the boxes KaTeX
-   computed for them, shearing the tips against overflow-clamped wrappers. */
-
-.katex-display {
-  /* 0.5rem margin + 0.4rem padding keeps the previous 0.9rem visual rhythm. */
-  margin: 0.5rem 0;
-  font-size: 1.1em;
-  /* Wide display math (matrices, long equations) scrolls instead of overflowing
-     the viewport on mobile. overflow-y hidden keeps the scrollbar horizontal-only. */
-  overflow-x: auto;
-  overflow-y: hidden;
-  /* Room for tall assembled delimiters that overhang the line box — the same
-     clipping .math-tall guards against (see below). */
-  padding: 0.4rem 0 calc(0.4rem + 2px);
-}
-
-/* Tall inline math (multi-row matrices/vectors/cases). inline-block forces the
-   surrounding line box to grow to the formula's full height, so it can no longer
-   overlap the paragraph line below it. max-width + overflow-x let genuinely wide
-   matrices scroll within their own box on narrow screens rather than pushing the
-   page wide. The vertical margin gives the taller line a bit of breathing room. */
-.math-tall {
-  display: inline-block;
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  vertical-align: middle;
-  margin: 0 0.15em;
-  /* The overflow clamp turns this span into a scroll container, and KaTeX's
-     assembled delimiters (the tall { of \begin{cases}, big parens, ∫ limits)
-     overhang their reported line box — without inner breathing room the brace
-     tips get sheared off. The padding trades the old outer margin for inner
-     space that the overhang can render into. */
-  padding: 0.4rem 0;
-}
-
-.mq-editable-field{
-  border: none !important;
-}
-
-.mq-root-block:focus{
-  border: none !important;
-}
-
-.mq-focused{
-  border: none !important
-}
-
-.mq-has-cursor{
-  border: none;
-}
-
-/* ============================================
-   Practice math input — pointer-aware layout
-   Physical-keyboard (fine pointer) devices get a compact inline answer bar;
-   the touch keypad renders only when the primary pointer is coarse.
-   ============================================ */
-.mi-touch-only {
-  display: none;
-}
-.mi-fine-only {
-  display: flex;
-}
-@media (pointer: coarse) {
-  .mi-touch-only {
-    display: block;
-  }
-  .mi-fine-only {
-    display: none;
-  }
-}
-
-/* Cards and containers */
-.card {
-  @apply rounded-3xl border-2 border-orange-100 bg-white p-6 shadow-lg dark:border-white/10 dark:bg-[#18181b];
-}
-
-/* Links */
-a {
-  @apply transition;
-}
-
-/* Form inputs */
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="number"],
-textarea {
-  @apply rounded-2xl border-2 px-4 py-3 transition focus:outline-none;
   background-color: var(--surface);
-  border-color: var(--border);
   color: var(--text-primary);
 }
-input[type="text"]::placeholder,
-input[type="email"]::placeholder,
-input[type="password"]::placeholder,
-input[type="number"]::placeholder,
-textarea::placeholder {
-  color: var(--text-muted);
-}
-input[type="text"]:focus,
-input[type="email"]:focus,
-input[type="password"]:focus,
-input[type="number"]:focus,
-textarea:focus {
+
+.btn-secondary:hover {
   border-color: var(--accent);
 }
 
-/* Mobile menu drawer slide-in */
-@keyframes slide-in-right {
-  from {
-    transform: translateX(100%);
-  }
-  to {
-    transform: translateX(0);
-  }
-}
-.animate-slide-in-right {
-  animation: slide-in-right 0.25s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+.btn-primary:hover,
+.btn-secondary:hover {
+  text-decoration: none;
 }
 
-/* Progress bars */
-.progress-bar {
-  @apply h-2 w-full overflow-hidden rounded-full bg-orange-100;
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.progress-bar-fill {
-  @apply h-full rounded-full bg-gradient-to-r from-orange-400 to-rose-400 transition-all;
-}
+/* ============================================================================
+   5. Header / nav tint hooks
 
-/* ── Print styles ── */
-/* ============================================
-   MATH-BOOK TYPOGRAPHY
-   Used by module (explanation) pages.
+   The per-subject tint is generated by src/lib/themes.ts as
+   `.subject-theme-<id>` blocks (injected once by the root layout) that set
+   --subject-accent, --nav-bg, --nav-border and --nav-control-*. The header
+   reads them with fallbacks to the site tokens, so outside a subject subtree
+   the header is plain. Nothing further is needed here.
+   ============================================================================ */
 
-   Goal: a lesson should read like a page of a textbook — a serif measure you
-   can stay in for ten minutes, displayed equations that stand apart from the
-   prose, and labelled, numbered statements (Definition 3.1, Theorem 3.2) the
-   eye can find while skimming.
+/* ============================================================================
+   6. Chapters
+   Used by the chapter page (src/components/chapter-page.tsx, chapter-body.tsx)
+   and the server renderer (src/lib/content/render-*.ts).
 
-   The environment classes (.mb-env*) are emitted by <MdxContent> from the
-   ::: fences documented in content/STYLE.md, and by the module page for
-   worked examples, intuition asides and pitfalls.
-   ============================================ */
+   A chapter should read like a page of a textbook: a serif measure you can
+   stay in for ten minutes, displayed equations that stand apart from the
+   prose, and labelled, numbered statements (Definition 3.1, Theorem 3.2)
+   the eye can find while skimming. The .mb-env* classes are emitted from the
+   ::: fences documented in content/STYLE.md.
+   ============================================================================ */
 
 .book-prose {
   font-family: var(--font-serif);
@@ -718,15 +265,14 @@ textarea:focus {
 .book-prose p,
 .book-prose li,
 .mb-env p,
-.mb-env li,
-.mb-solution-steps li {
+.mb-env li {
   overflow-x: auto;
   overflow-y: clip;
   overflow-clip-margin: 0.75em;
   scrollbar-width: thin;
 }
 
-/* Chapter / section numbering ------------------------------------------------ */
+/* Chapter / section numbering ---------------------------------------------- */
 
 .book-chapter-label {
   font-family: var(--font-sans);
@@ -753,7 +299,7 @@ textarea:focus {
   opacity: 0.9;
 }
 
-/* Displayed equations -------------------------------------------------------- */
+/* Displayed equations ------------------------------------------------------ */
 
 .mb-display {
   margin: 1.35rem 0;
@@ -772,7 +318,7 @@ textarea:focus {
   color: var(--text-primary);
 }
 
-/* Environments --------------------------------------------------------------- */
+/* Environments ------------------------------------------------------------- */
 
 .mb-env {
   margin: 1.5rem 0;
@@ -844,7 +390,6 @@ textarea:focus {
 .mb-env-aside {
   border-left: 2px solid var(--border);
   background: var(--surface-2);
-  border-radius: 0 0.5rem 0.5rem 0;
   padding: 0.9rem 1.1rem;
   font-size: 0.97em;
 }
@@ -854,11 +399,7 @@ textarea:focus {
 }
 
 .mb-env-pitfall {
-  border-left-color: #d97706;
-}
-
-.dark .mb-env-pitfall {
-  border-left-color: #f59e0b;
+  border-left-color: var(--warn);
 }
 
 .mb-env-aside .mb-env-label {
@@ -887,21 +428,35 @@ textarea:focus {
   color: var(--text-muted);
 }
 
-/* Worked examples: statement, then a "Solution." run-in and the steps. */
-.mb-solution-steps {
-  margin: 0.5rem 0 0;
-  padding-left: 1.4rem;
-  list-style: decimal;
+.mb-env-figure {
+  margin: 2rem 0;
+  padding: 0;
+  border: 0;
 }
 
-.mb-solution-steps > li {
-  margin-bottom: 0.4rem;
-  padding-left: 0.2rem;
+/* Mathematics (KaTeX) ------------------------------------------------------ */
+
+.katex {
+  font-size: 1em;
 }
 
-.mb-solution-steps > li::marker {
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
+/* NOTE: never re-add `.katex .sizeN { font-size: … }` overrides here. They
+   match KaTeX's internal spans — .delimsizing.size1–4 pick larger *fonts* at
+   1em, and .sizing/reset-* set their own sizes — so a font-size override
+   inflates glyphs (e.g. the tall { of \begin{cases}) beyond the boxes KaTeX
+   computed for them, shearing the tips against overflow-clamped wrappers. */
+
+.katex-display {
+  /* 0.5rem margin + 0.4rem padding keeps the previous 0.9rem visual rhythm. */
+  margin: 0.5rem 0;
+  font-size: 1.1em;
+  /* Wide display math (matrices, long equations) scrolls instead of overflowing
+     the viewport on mobile. overflow-y hidden keeps the scrollbar horizontal-only. */
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Room for tall assembled delimiters that overhang the line box — the same
+     clipping .math-tall guards against (see below). */
+  padding: 0.4rem 0 calc(0.4rem + 2px);
 }
 
 /* KaTeX display blocks inherit the surrounding measure; keep long lines scrollable
@@ -910,95 +465,47 @@ textarea:focus {
 .mb-env .katex-display {
   overflow-x: auto;
   overflow-y: hidden;
-  /* Same delimiter-overhang guard as the base .katex-display rule. */
   padding: 0.4rem 0;
 }
 
-@media print {
-  header, footer, nav,
-  [data-no-print] {
-    display: none !important;
-  }
-
-  html {
-    font-size: 10pt;
-  }
-
-  body {
-    background: white !important;
-    color: black !important;
-    font-size: 10pt;
-    line-height: 1.5;
-  }
-
-  * {
-    background: transparent !important;
-    background-image: none !important;
-    box-shadow: none !important;
-    text-shadow: none !important;
-  }
-
-  article, section, div, details {
-    border-radius: 0 !important;
-  }
-
-  article {
-    border: none !important;
-    padding: 0 !important;
-  }
-
-  section {
-    border: none !important;
-  }
-
-  .print-only {
-    display: block !important;
-  }
-
-  .print-keep-together {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  /* Environments keep their margin rule on paper — it is the only thing marking
-     a statement once colour is gone. */
-  .mb-env-statement,
-  .mb-env-declaration,
-  .mb-env-aside {
-    border-left: 1pt solid #71717a !important;
-    padding-left: 8pt;
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .book-prose {
-    max-width: none;
-    font-size: 10pt;
-  }
-
-  h1 { font-size: 16pt; }
-  h2 { font-size: 12pt; break-after: avoid; page-break-after: avoid; }
-  h4 { break-after: avoid; page-break-after: avoid; }
-  p, li, div { orphans: 3; widows: 3; }
-
-  details { display: block; }
-  details > summary { display: none; }
-  details > :not(summary) { display: block !important; }
-
-  hr {
-    border: none !important;
-    border-top: 1px solid #d4d4d8 !important;
-  }
+/* Tall inline math (multi-row matrices/vectors/cases). inline-block forces the
+   surrounding line box to grow to the formula's full height, so it can no longer
+   overlap the paragraph line below it. max-width + overflow-x let genuinely wide
+   matrices scroll within their own box on narrow screens rather than pushing the
+   page wide. The vertical margin gives the taller line a bit of breathing room. */
+.math-tall {
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  vertical-align: middle;
+  margin: 0 0.15em;
+  /* The overflow clamp turns this span into a scroll container, and KaTeX's
+     assembled delimiters (the tall { of \begin{cases}, big parens, ∫ limits)
+     overhang their reported line box — without inner breathing room the brace
+     tips get sheared off. The padding trades the old outer margin for inner
+     space that the overhang can render into. */
+  padding: 0.4rem 0;
 }
 
-/* ------------------------------------------------------------------ *
-   Figures (:::figure)
+/* A formula KaTeX refused. content:latex would already have failed, so this is
+   a loud marker for the rare thing that slips through, never a quiet blank. */
+.katex-error {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85em;
+  color: var(--text-primary);
+  background: var(--surface-2);
+  outline: 1px solid var(--warn);
+  padding: 0 0.2rem;
+}
 
-   Drawn as inline SVG from a JSON spec, never shipped as an image, so
-   that every colour below is a variable and a figure re-themes itself
-   with the page. A raster diagram would carry a baked white background
-   into dark mode.
- * ------------------------------------------------------------------ */
+/* ============================================================================
+   7. Figures (:::figure)
+
+   Drawn as inline SVG from a JSON spec, never shipped as an image, so that
+   every colour below is a variable and a figure re-themes itself with the
+   page. A raster diagram would carry a baked white background into dark mode.
+   ============================================================================ */
 
 :root {
   --fig-axis: #6b7280;
@@ -1047,15 +554,8 @@ textarea:focus {
   --fig-surface: #0d1117;
 }
 
-.mb-env-figure {
-  margin: 2rem 0;
-  padding: 0;
-  border: 0;
-}
-
 .fig-frame {
   border: 1px solid var(--border);
-  border-radius: 0.75rem;
   background: var(--fig-surface);
   padding: 0.5rem 0.25rem;
   overflow: hidden;
@@ -1134,10 +634,8 @@ textarea:focus {
   stroke-width: 2.5;
 }
 
-/* Washes follow their tone like every other mark. These were pinned to the
-   accent fill, so a figure that toned a region — to separate the part of a
-   sequence that matters from the part that does not — encoded information the
-   page never showed. */
+/* Washes follow their tone like every other mark, so a figure that tones a
+   region encodes the same distinction the page shows. */
 .fig-area {
   fill: var(--tone-wash, var(--fig-area));
   stroke: none;
@@ -1207,29 +705,60 @@ textarea:focus {
   color: var(--text-primary);
 }
 
-@media print {
-  .fig-frame {
-    break-inside: avoid;
+/* ============================================================================
+   8. Practice / math input
+   ============================================================================ */
+
+/* Pointer-aware layout: physical-keyboard (fine pointer) devices get a compact
+   inline answer bar; the touch keypad renders only when the primary pointer
+   is coarse. */
+.mi-touch-only {
+  display: none;
+}
+
+.mi-fine-only {
+  display: flex;
+}
+
+@media (pointer: coarse) {
+  .mi-touch-only {
+    display: block;
+  }
+  .mi-fine-only {
+    display: none;
   }
 }
 
-/* ==================================================================== *
-   PROBLEM SHEETS  (/[subject]/test/[topicId] and .../answers)
-   ------------------------------------------------------------------
-   One contiguous block, appended last on purpose so it merges cleanly.
+/* MathQuill injects its own stylesheet at runtime (after this one), and it
+   draws a border and focus ring around the field. The input's own bordered box
+   is the visible edge, so MathQuill's must stay off. */
+.mq-editable-field,
+.mq-editable-field.mq-focused,
+.mq-editable-field:focus,
+.mq-root-block:focus,
+.mq-focused {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
 
-   These two pages are Server Components with no client JavaScript: the
-   whole feature is HTML plus the rules below. The page's real output is
-   a sheet of A4, so every rule here has a screen half and a paper half.
+.mq-has-cursor {
+  border: none;
+}
 
-   THE RULE THAT MATTERS: `.answer-reveal` is display:none in print,
-   open or closed. A learner who expands question 4 to check it and then
-   prints must still get a clean sheet. The solutions on the /answers
-   page are NOT `.answer-reveal` — they are the page's content, and they
-   print. Note also that the global print block above force-opens every
-   <details> (`details > :not(summary) { display: block !important }`);
-   hiding the <details> element itself is what beats that.
- * ==================================================================== */
+/* ============================================================================
+   9. Problem sheets  (/[subject]/test/[topicId] and .../answers)
+
+   Two Server Components with no client JavaScript beyond the "done" mark: the
+   whole feature is HTML plus the rules below. The page's real output is a
+   sheet of A4, so every rule here has a screen half and (in section 10) a
+   paper half.
+
+   THE RULE THAT MATTERS: `.answer-reveal` is display:none in print, open or
+   closed. A learner who expands question 4 to check it and then prints must
+   still get a clean sheet. The solutions on the /answers page are NOT
+   `.answer-reveal` — they are the page's content, and they print.
+   ============================================================================ */
 
 .ps-sheet {
   margin: 0 auto;
@@ -1244,7 +773,7 @@ textarea:focus {
   }
 }
 
-/* --- screen-only chrome ------------------------------------------- */
+/* --- screen-only chrome --------------------------------------------------- */
 
 .ps-chrome {
   display: flex;
@@ -1269,7 +798,6 @@ textarea:focus {
 
 .ps-howto {
   margin-top: 1.25rem;
-  border-radius: 0.75rem;
   border: 1px solid var(--border);
   background: var(--surface-2);
   padding: 0.75rem 1rem;
@@ -1278,7 +806,7 @@ textarea:focus {
   color: var(--text-secondary);
 }
 
-/* --- the sheet head ----------------------------------------------- */
+/* --- the sheet head ------------------------------------------------------- */
 
 .ps-head {
   margin-top: 2rem;
@@ -1318,11 +846,11 @@ textarea:focus {
   color: var(--text-secondary);
 }
 
-/* Name / Date rules. Print-only: an empty line to write on is furniture
-   on a screen and the first thing filled in on paper. Deliberately no
-   `display` here — the element is hidden on screen by Tailwind's .hidden,
-   and this block is emitted after the utilities, so declaring one would
-   win and leak the blank rules onto the page. The print block sets it. */
+/* Name / Date rules. Print-only: an empty line to write on is furniture on a
+   screen and the first thing filled in on paper. Deliberately no `display`
+   here — the element is hidden on screen by Tailwind's .hidden, and a display
+   declared in this (unlayered) rule would win and leak the blank rules onto
+   the page. The print block sets it. */
 .ps-nameline {
   margin-top: 1rem;
   gap: 2rem;
@@ -1335,7 +863,7 @@ textarea:focus {
   font-size: 9pt;
 }
 
-/* --- the numbered questions --------------------------------------- */
+/* --- the numbered questions ----------------------------------------------- */
 
 .ps-list {
   margin-top: 2rem;
@@ -1428,11 +956,10 @@ textarea:focus {
   min-height: calc(var(--ps-work-lines, 6) * 7mm);
 }
 
-/* --- the per-question reveal (screen) ------------------------------ */
+/* --- the per-question reveal (screen) ------------------------------------- */
 
 .answer-reveal {
   margin-top: 1rem;
-  border-radius: 0.6rem;
   border: 1px solid var(--border);
   background: var(--surface-2);
 }
@@ -1466,7 +993,7 @@ textarea:focus {
   color: var(--text-secondary);
 }
 
-/* --- the solutions sheet ------------------------------------------ */
+/* --- the solutions sheet -------------------------------------------------- */
 
 .ps-item-answer + .ps-item-answer {
   margin-top: 2rem;
@@ -1503,8 +1030,8 @@ textarea:focus {
 
 /* A formula KaTeX refused; content:problemsets would already have failed. */
 .ps-math-error {
-  border-radius: 0.2rem;
   background: var(--surface-2);
+  outline: 1px solid var(--warn);
   padding: 0 0.2rem;
   font-family: ui-monospace, monospace;
   font-size: 0.85em;
@@ -1517,9 +1044,11 @@ textarea:focus {
   padding: 0.4rem 0;
 }
 
-/* ------------------------------------------------------------------ *
-   Paper
- * ------------------------------------------------------------------ */
+/* ============================================================================
+   10. Print
+   The `!important`s here beat the unlayered .theme-* / .ps-* rules above;
+   Tailwind utilities would lose to these rules anyway.
+   ============================================================================ */
 
 @page {
   size: A4;
@@ -1527,9 +1056,87 @@ textarea:focus {
 }
 
 @media print {
-  /* THE SPOILER RULE. A revealed answer must not reach the paper, and
-     `[open]` must not rescue it either. Hiding the <details> itself also
-     defeats the global rule that force-opens every <details> in print. */
+  header,
+  footer,
+  nav,
+  [data-no-print] {
+    display: none !important;
+  }
+
+  html {
+    font-size: 10pt;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 10pt;
+    line-height: 1.5;
+  }
+
+  * {
+    background: transparent !important;
+  }
+
+  article {
+    border: none;
+    padding: 0;
+  }
+
+  section {
+    border: none;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .print-keep-together {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Chapters ------------------------------------------------------------- */
+
+  /* Environments keep their margin rule on paper — it is the only thing marking
+     a statement once colour is gone. */
+  .mb-env-statement,
+  .mb-env-declaration,
+  .mb-env-aside {
+    border-left: 1pt solid #71717a;
+    padding-left: 8pt;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .book-prose {
+    max-width: none;
+    font-size: 10pt;
+  }
+
+  h1 { font-size: 16pt; }
+  h2 { font-size: 12pt; break-after: avoid; page-break-after: avoid; }
+  h4 { break-after: avoid; page-break-after: avoid; }
+  p, li, div { orphans: 3; widows: 3; }
+
+  details { display: block; }
+  details > summary { display: none; }
+  details > :not(summary) { display: block !important; }
+
+  hr {
+    border: none !important;
+    border-top: 1px solid #d4d4d8 !important;
+  }
+
+  .fig-frame {
+    break-inside: avoid;
+  }
+
+  /* Problem sheets ------------------------------------------------------- */
+
+  /* THE SPOILER RULE. A revealed answer must not reach the paper, and `[open]`
+     must not rescue it either. Hiding the <details> itself also defeats the
+     rule above that force-opens every <details> in print. */
   .answer-reveal,
   .answer-reveal[open] {
     display: none !important;
@@ -1544,12 +1151,13 @@ textarea:focus {
 
   .ps-head {
     margin-top: 0;
-    border-bottom: 1pt solid #000 !important;
+    border-bottom: 1pt solid #000;
     padding-bottom: 6pt;
   }
 
   /* `.print-only` reveals with display:block, which would collapse the two
-     name/date rules into one column — put the row back. */
+     name/date rules into one column — put the row back. Must follow the
+     .print-only rule above. */
   .ps-nameline {
     display: flex !important;
   }
@@ -1561,7 +1169,7 @@ textarea:focus {
   .ps-eyebrow,
   .ps-meta,
   .ps-tag {
-    color: #3f3f46 !important;
+    color: #3f3f46;
   }
 
   .ps-instructions {
@@ -1572,17 +1180,17 @@ textarea:focus {
     margin-top: 10mm;
   }
 
-  /* On paper the rule between questions is noise — the blank working
-     space already separates them. */
+  /* On paper the rule between questions is noise — the blank working space
+     already separates them. */
   .ps-item + .ps-item {
     margin-top: 9mm;
-    border-top: none !important;
+    border-top: none;
     padding-top: 0;
   }
 
   /* A number must never be orphaned from the question it numbers, so the
-     number, the prompt and any parts are one unbreakable block. The
-     working space below is allowed to flow onto the next page. */
+     number, the prompt and any parts are one unbreakable block. The working
+     space below is allowed to flow onto the next page. */
   .ps-question {
     break-inside: avoid;
     page-break-inside: avoid;
@@ -1595,7 +1203,7 @@ textarea:focus {
   }
 
   .ps-solution {
-    border-left: 1pt solid #71717a !important;
+    border-left: 1pt solid #71717a;
   }
 
   .ps-item-answer {
