@@ -569,12 +569,19 @@ export const normalizeAnswer = (input: string) => {
   return out;
 };
 
-// Numeric / expression equivalence (client-side)
-let math: typeof import("mathjs") | null = null;
+// Numeric / expression equivalence (client-side).
+//
+// The number-only build of mathjs: the grader only ever reads `evaluate` as a
+// finite number (see tryEval), so BigNumber, Complex, Fraction, Matrix and
+// Unit support would be dead weight — about two thirds of the full library.
+// Loaded on the first grade, not with the page. `npm run content:answers`
+// replays the whole corpus through this same code, so a build that changed
+// what evaluates would fail that gate.
+type MathNumber = typeof import("mathjs/number");
+let math: MathNumber | null = null;
 const getMath = async () => {
   if (math) return math;
-  // Lazy-load to keep initial bundle smaller.
-  math = await import("mathjs");
+  math = await import("mathjs/number");
   return math;
 };
 
@@ -634,7 +641,7 @@ const scalarNumericEquivalent = async (aExpr: string, bExpr: string): Promise<bo
 };
 
 const tryEval = (
-  m: typeof import("mathjs"),
+  m: MathNumber,
   expr: string,
   scope: Record<string, number>,
 ) => {

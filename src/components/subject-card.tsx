@@ -36,7 +36,7 @@ export function SubjectCard({ subject }: { subject: SubjectCardData }) {
     : null;
 
   return (
-    <Link href={`/${subject.slug}`} className="flex flex-col border theme-border bg-[var(--surface)] p-5">
+    <Link prefetch={false} href={`/${subject.slug}`} className="flex flex-col border theme-border bg-[var(--surface)] p-5">
       <div className="flex items-start justify-between gap-3">
         <span
           aria-hidden

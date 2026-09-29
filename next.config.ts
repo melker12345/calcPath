@@ -81,10 +81,18 @@ function legacyContentRedirects(): Redirect[] {
 }
 
 const nextConfig: NextConfig = {
-  skipTrailingSlashRedirect: true,
-  experimental: {
-    optimizePackageImports: ["katex"],
+  poweredByHeader: false,
+  async headers() {
+    return [
+      {
+        // KaTeX CSS + fonts from public/katex (scripts/sync-katex.ts). The
+        // stylesheet URL carries the KaTeX version, so both can be immutable.
+        source: "/katex/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+    ];
   },
+  skipTrailingSlashRedirect: true,
   async redirects() {
     return [
       // Legacy top-level routes from before subjects existed.

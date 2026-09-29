@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ChapterPage } from "@/components/chapter-page";
 import { listChapterParams, loadChapter } from "@/lib/content/chapter";
-import "katex/dist/katex.min.css";
+import { preloadKatexFonts } from "@/lib/katex-assets";
 
 type Props = { params: Promise<{ subject: string; topicId: string }> };
 
@@ -46,6 +46,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ChapterRoute({ params }: Props) {
+  preloadKatexFonts();
   const { subject: slug, topicId } = await params;
   const chapter = await loadChapter(slug, topicId);
   if (!chapter) notFound();

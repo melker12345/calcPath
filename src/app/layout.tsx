@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Providers } from "@/components/providers";
 import { allThemesCss } from "@/lib/themes";
+import { KATEX_CSS_HREF } from "@/lib/katex-assets";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -74,6 +75,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* KaTeX styles + fonts, self-hosted (public/katex, font-display: swap). */}
+        <link rel="stylesheet" href={KATEX_CSS_HREF} />
         {/* Per-subject nav tint (light + dark), generated from src/lib/themes.ts
             and scoped via .subject-theme-<id> classes. */}
         <style

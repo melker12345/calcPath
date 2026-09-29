@@ -5,7 +5,6 @@ import { useMemo, useState } from "react";
 import { useProgress } from "@/lib/use-progress";
 import { chapterKey, getPracticeProgress } from "@/lib/progress";
 import { SubjectBreadcrumbs } from "@/components/subject-breadcrumbs";
-import { MathText } from "@/components/math-text";
 
 type CourseTopic = {
   id: string;
@@ -16,6 +15,8 @@ type CourseTopic = {
 
 type ModuleSection = {
   title: string;
+  /** The title typeset on the server (render-math), when it holds mathematics. */
+  titleHtml?: string;
   /** Stable slug for # anchors; matches question.section and progress. */
   section?: string;
 };
@@ -86,7 +87,7 @@ export function CourseContentsPage({
           <span className="mx-2 theme-text-muted">·</span>
           <span className="tabular-nums">{problems.length} practice questions</span>
           <span className="mx-2 theme-text-muted">·</span>
-          <Link href={`/dashboard/${subjectSlug}`} className="text-[var(--accent)] hover:underline">
+          <Link prefetch={false} href={`/dashboard/${subjectSlug}`} className="text-[var(--accent)] hover:underline">
             Your progress
           </Link>
         </p>
@@ -109,7 +110,7 @@ export function CourseContentsPage({
                 <div className="flex items-start gap-3">
                   <span className="w-7 shrink-0 pt-0.5 text-right tabular-nums theme-text-muted">{index + 1}.</span>
                   <div className="min-w-0 flex-1">
-                    <Link
+                    <Link prefetch={false}
                       href={`/${subjectSlug}/modules/${topic.id}`}
                       className="text-base font-semibold theme-text hover:underline sm:text-lg"
                     >
@@ -122,7 +123,7 @@ export function CourseContentsPage({
                       {practice.total > 0 && (
                         <>
                           <span className="mx-2 theme-text-muted">·</span>
-                          <Link
+                          <Link prefetch={false}
                             href={`/${subjectSlug}/practice/${topic.id}`}
                             className="tabular-nums hover:underline"
                           >
@@ -133,7 +134,7 @@ export function CourseContentsPage({
                       {hasSheet && (
                         <>
                           <span className="mx-2 theme-text-muted">·</span>
-                          <Link href={`/${subjectSlug}/test/${topic.id}`} className="hover:underline">
+                          <Link prefetch={false} href={`/${subjectSlug}/test/${topic.id}`} className="hover:underline">
                             Problem set{sheetDone ? " ✓" : ""}
                           </Link>
                         </>
@@ -166,11 +167,15 @@ export function CourseContentsPage({
                             <span className="shrink-0 tabular-nums theme-text-muted">
                               {index + 1}.{sIdx + 1}
                             </span>
-                            <Link
+                            <Link prefetch={false}
                               href={`/${subjectSlug}/modules/${topic.id}#${slug}`}
                               className="theme-text-secondary hover:underline"
                             >
-                              <MathText text={section.title} />
+                              {section.titleHtml ? (
+                                <span dangerouslySetInnerHTML={{ __html: section.titleHtml }} />
+                              ) : (
+                                section.title
+                              )}
                             </Link>
                           </li>
                         );

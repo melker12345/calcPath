@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import type { Problem } from "@/lib/shared-types";
+import type { ProblemCore } from "@/lib/shared-types";
 import type { FeedbackState, QuestionStatus } from "./types";
 
-interface UsePracticeSessionOptions {
-  problems: Problem[];
+interface UsePracticeSessionOptions<P extends ProblemCore = ProblemCore> {
+  problems: P[];
   completedProblemIds: string[];
   onManualNavigate?: () => void;
   sectionFilter?: string | null;
@@ -13,11 +13,11 @@ interface UsePracticeSessionOptions {
   focusId?: string | null;
 }
 
-interface UsePracticeSessionReturn {
-  displayProblems: Problem[];
+interface UsePracticeSessionReturn<P extends ProblemCore = ProblemCore> {
+  displayProblems: P[];
   index: number;
   setIndex: (index: number) => void;
-  current: Problem | undefined;
+  current: P | undefined;
   questionStatuses: QuestionStatus[];
   hasManuallyNavigated: boolean;
   solvedCount: number;
@@ -66,15 +66,15 @@ function shuffleArray<T>(array: T[]): T[] {
  * Custom hook that encapsulates the core state and logic for a practice session.
  * This is the foundation for making the practice experience reusable across subjects.
  */
-export function usePracticeSession({
+export function usePracticeSession<P extends ProblemCore = ProblemCore>({
   problems: allProblems,
   completedProblemIds,
   onManualNavigate,
   sectionFilter,
   focusId,
-}: UsePracticeSessionOptions): UsePracticeSessionReturn {
+}: UsePracticeSessionOptions<P>): UsePracticeSessionReturn<P> {
   const [manualIndex, setManualIndex] = useState<number | null>(null);
-  const [shuffledProblems, setShuffledProblems] = useState<Problem[] | null>(null);
+  const [shuffledProblems, setShuffledProblems] = useState<P[] | null>(null);
   const [hasManuallyNavigated, setHasManuallyNavigated] = useState(false);
   const [transientByProblem, setTransientByProblem] = useState<Record<string, TransientState>>({});
 

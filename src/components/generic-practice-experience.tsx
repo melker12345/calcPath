@@ -3,7 +3,6 @@
 import React, { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { MathText } from "@/components/math-text";
 import { MathInput } from "@/components/math-input";
 import { ReportIssue } from "@/components/report-issue";
 import { useProgress } from "@/lib/use-progress";
@@ -14,11 +13,9 @@ import {
   ProgressDots,
   PracticeFeedback,
   usePracticeSession,
-  getDefaultHint,
-  extractFinalAnswer,
   orderedChoices,
 } from "@/components/practice";
-import type { Problem, Topic } from "@/lib/shared-types";
+import type { RenderedProblem, Topic } from "@/lib/shared-types";
 
 /**
  * GenericPracticeExperience — the practice page for one chapter.
@@ -36,7 +33,7 @@ import type { Problem, Topic } from "@/lib/shared-types";
  * id and the report form.
  *
  * Resilience: a per-question error boundary keeps one malformed question from
- * taking the session down; every piece of text is rendered through MathText,
+ * taking the session down; every piece of mathematics arrives pre-rendered,
  * which has its own per-fragment fallback.
  */
 
@@ -110,7 +107,7 @@ export function GenericPracticeExperience({
   hasProblemSet = false,
 }: {
   topic: Topic;
-  problems: Problem[];
+  problems: RenderedProblem[];
   subjectSlug: string;
   subjectLabel: string;
   nextTopic?: { id: string; title: string };
@@ -189,7 +186,13 @@ export function GenericPracticeExperience({
   // Display order of the choices: seeded on the question id, the same before
   // and after grading (see practice/shuffleChoices.ts).
   const choices = useMemo(
-    () => (current?.type === "mcq" ? orderedChoices(current.id, current.choices) : []),
+    () =>
+      current?.type === "mcq"
+        ? orderedChoices(
+            current.id,
+            (current.choices ?? []).map((text, i) => ({ text, html: current.html.choices?.[i] ?? text })),
+          )
+        : [],
     [current]
   );
 
@@ -199,10 +202,10 @@ export function GenericPracticeExperience({
         <h1 className="text-2xl font-semibold theme-text">{topic.title}</h1>
         <p className="mt-3 text-base theme-text-secondary">No practice questions are available for this chapter yet.</p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href={backToExplanationHref} className="btn-primary">
+          <Link prefetch={false} href={backToExplanationHref} className="btn-primary">
             Read the chapter
           </Link>
-          <Link href={`/${subjectSlug}`} className="btn-secondary">
+          <Link prefetch={false} href={`/${subjectSlug}`} className="btn-secondary">
             All {subjectLabel} chapters
           </Link>
         </div>
@@ -210,14 +213,14 @@ export function GenericPracticeExperience({
     );
   }
 
-  if (!current || typeof current.prompt !== "string" || !current.explanation) {
+  if (!current || typeof current.prompt !== "string" || !current.html) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6">
         <p className="theme-text-secondary">This question could not be displayed.</p>
         <button type="button" onClick={goToNext} className="btn-primary mt-4">
           Skip to next question
         </button>
-        <Link href={`/${subjectSlug}`} className="mt-3 block text-[var(--accent)] underline">
+        <Link prefetch={false} href={`/${subjectSlug}`} className="mt-3 block text-[var(--accent)] underline">
           All {subjectLabel} chapters
         </Link>
       </div>
@@ -267,8 +270,6 @@ export function GenericPracticeExperience({
     }
   };
 
-  const getHint = () => getDefaultHint(current?.explanation || "", current?.answer);
-  const finalAnswer = extractFinalAnswer(current?.explanation || "", current?.answer || "");
 
   // Everything a report needs to be reproducible without asking the learner:
   // which question, what the grader expected, every graded submission, and the
@@ -286,14 +287,14 @@ export function GenericPracticeExperience({
   const feedbackEl = feedback ? (
     <PracticeFeedback
       feedback={feedback}
-      current={{ id: current.id, explanation: current.explanation, answer: current.answer }}
+      stepsHtml={current.html.steps}
+      finalAnswerHtml={current.html.finalAnswer}
+      hintHtml={current.html.hint}
       onNext={goToNext}
       onUseHint={useHint}
       onShowSolution={() =>
         setFeedback((prev) => (prev && prev.type === "incorrect" ? { ...prev, showSolution: true } : prev))
       }
-      getHint={getHint}
-      finalAnswer={finalAnswer}
       isLastQuestion={index === displayProblems.length - 1}
       embedded={current.type !== "mcq" && feedback.type === "incorrect" && !feedback.showSolution}
     />
@@ -340,10 +341,10 @@ export function GenericPracticeExperience({
         {/* Prompt */}
         <div className="py-6 text-center sm:py-8">
           <div role="heading" aria-level={2} className="text-lg leading-relaxed theme-text sm:text-xl">
-            <MathText text={current.prompt} />
+            <span dangerouslySetInnerHTML={{ __html: current.html.prompt }} />
           </div>
           <p className="mt-3">
-            <Link href={getSectionHref(subjectSlug, current.topicId, current.section)} className="text-sm text-[var(--accent)] hover:underline">
+            <Link prefetch={false} href={getSectionHref(subjectSlug, current.topicId, current.section)} className="text-sm text-[var(--accent)] hover:underline">
               Read the section this question comes from
             </Link>
           </p>
@@ -357,8 +358,8 @@ export function GenericPracticeExperience({
           <div className="flex flex-col gap-3">
             <div role="radiogroup" aria-label="Answer choices" className="flex flex-col gap-2">
               {choices.map((choice) => {
-                const isSelected = answer === choice;
-                const isCorrectChoice = isMcqAnswerCorrect(choice, current.answer, current.choices);
+                const isSelected = answer === choice.text;
+                const isCorrectChoice = isMcqAnswerCorrect(choice.text, current.answer, current.choices);
                 let boxClass = isSelected ? "border-[var(--accent)]" : "theme-border";
                 let label: string | null = null;
                 if (mcqAnswered) {
@@ -374,20 +375,18 @@ export function GenericPracticeExperience({
                 }
                 return (
                   <button
-                    key={choice}
+                    key={choice.text}
                     type="button"
                     role="radio"
                     aria-checked={isSelected}
                     onClick={() => {
-                      setAnswer(choice);
-                      submitAnswer(choice);
+                      setAnswer(choice.text);
+                      submitAnswer(choice.text);
                     }}
                     disabled={mcqAnswered}
                     className={`flex items-baseline justify-between gap-3 border bg-[var(--surface)] px-4 py-3 text-left text-base theme-text disabled:pointer-events-none sm:text-lg ${boxClass}`}
                   >
-                    <span>
-                      <MathText text={choice} />
-                    </span>
+                    <span dangerouslySetInnerHTML={{ __html: choice.html }} />
                     {label && (
                       <span className="shrink-0 text-xs font-medium theme-text-muted">{label}</span>
                     )}
@@ -443,16 +442,16 @@ export function GenericPracticeExperience({
             printable problem set if the chapter has one.
           </p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            <Link href={backToExplanationHref} className="btn-primary">
+            <Link prefetch={false} href={backToExplanationHref} className="btn-primary">
               Back to the chapter
             </Link>
             {hasProblemSet && (
-              <Link href={`/${subjectSlug}/test/${topicId}`} className="btn-secondary">
+              <Link prefetch={false} href={`/${subjectSlug}/test/${topicId}`} className="btn-secondary">
                 Printable problem set
               </Link>
             )}
             {nextTopic && (
-              <Link href={`/${subjectSlug}/practice/${nextTopic.id}`} className="btn-secondary">
+              <Link prefetch={false} href={`/${subjectSlug}/practice/${nextTopic.id}`} className="btn-secondary">
                 Next chapter&apos;s practice
               </Link>
             )}
@@ -502,11 +501,11 @@ export function GenericPracticeExperience({
           {/* The stable id, as stored in questions.json: what a report points at. */}
           <code className="text-xs theme-text-muted">{current.id}</code>
           {hasProblemSet && (
-            <Link className={quietLink} href={`/${subjectSlug}/test/${topicId}`}>
+            <Link prefetch={false} className={quietLink} href={`/${subjectSlug}/test/${topicId}`}>
               Problem set
             </Link>
           )}
-          <Link className={quietLink} href={`/${subjectSlug}`}>
+          <Link prefetch={false} className={quietLink} href={`/${subjectSlug}`}>
             All {subjectLabel} chapters
           </Link>
         </div>

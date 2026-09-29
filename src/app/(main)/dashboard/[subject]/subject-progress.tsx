@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useProgress } from "@/lib/use-progress";
-import { MathText } from "@/components/math-text";
 import { chapterKey, countCorrectIn } from "@/lib/progress";
 import type { DashboardTopic } from "@/lib/content/loader";
 
-export type SubjectProgressTopic = DashboardTopic & { hasProblemSet: boolean };
+export type SubjectProgressTopic = Omit<DashboardTopic, "sections"> & {
+  hasProblemSet: boolean;
+  sections: Array<DashboardTopic["sections"][number] & { titleHtml: string }>;
+};
 
 const cell = "border-b theme-border py-2 pr-2 align-top sm:pr-3";
 const num = `${cell} text-right tabular-nums whitespace-nowrap`;
@@ -38,7 +40,7 @@ export function SubjectProgress({
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <nav className="text-sm theme-text-muted">
-        <Link href="/dashboard" className="hover:underline">
+        <Link prefetch={false} href="/dashboard" className="hover:underline">
           Progress
         </Link>
         <span className="mx-2">/</span>
@@ -49,7 +51,7 @@ export function SubjectProgress({
         {chaptersRead} / {topics.length} chapters read · {correctTotal} / {questionTotal} questions correct
         {sheets.length > 0 && ` · ${sheetsDone} / ${sheets.length} problem sets done`}
         {" · "}
-        <Link href={`/${subject.slug}`} className="text-[var(--accent)] hover:underline">
+        <Link prefetch={false} href={`/${subject.slug}`} className="text-[var(--accent)] hover:underline">
           Contents
         </Link>
       </p>
@@ -80,7 +82,7 @@ export function SubjectProgress({
                 <tr>
                   <td className={`${cell} tabular-nums theme-text-muted`}>{index + 1}</td>
                   <td className={cell}>
-                    <Link href={`/${subject.slug}/modules/${t.id}`} className="theme-text hover:underline">
+                    <Link prefetch={false} href={`/${subject.slug}/modules/${t.id}`} className="theme-text hover:underline">
                       {t.title}
                     </Link>
                     {hasSections && (
@@ -106,7 +108,7 @@ export function SubjectProgress({
                   </td>
                   <td className={num}>
                     {t.questionTotal > 0 ? (
-                      <Link href={`/${subject.slug}/practice/${t.id}`} className="hover:underline">
+                      <Link prefetch={false} href={`/${subject.slug}/practice/${t.id}`} className="hover:underline">
                         {correct} / {t.questionTotal}
                       </Link>
                     ) : (
@@ -124,7 +126,7 @@ export function SubjectProgress({
                         >
                           {done ? "done ✓" : "mark done"}
                         </button>
-                        <Link
+                        <Link prefetch={false}
                           href={`/${subject.slug}/test/${t.id}`}
                           className="ml-2 inline-block text-xs text-[var(--accent)] hover:underline"
                         >
@@ -146,14 +148,14 @@ export function SubjectProgress({
                           {index + 1}.{sIdx + 1}
                         </td>
                         <td className={`${cell} pl-4`}>
-                          <Link href={`/${subject.slug}/modules/${t.id}#${s.slug}`} className="hover:underline">
-                            <MathText text={s.title} />
+                          <Link prefetch={false} href={`/${subject.slug}/modules/${t.id}#${s.slug}`} className="hover:underline">
+                            <span dangerouslySetInnerHTML={{ __html: s.titleHtml }} />
                           </Link>
                         </td>
                         <td className={cell} />
                         <td className={num}>
                           {s.total > 0 ? (
-                            <Link
+                            <Link prefetch={false}
                               href={`/${subject.slug}/practice/${t.id}?section=${encodeURIComponent(s.slug)}`}
                               className="hover:underline"
                             >

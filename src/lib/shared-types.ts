@@ -18,6 +18,25 @@ export type Problem = {
   difficulty: "easy" | "medium" | "hard";
 };
 
+/**
+ * A practice question with every piece of mathematics already typeset on the
+ * server (src/lib/content/render-practice.ts), so the practice page ships no
+ * KaTeX JavaScript. `html.choices[i]` corresponds to `choices[i]`. The raw
+ * explanation stays on the server: the client only needs its typeset steps.
+ */
+/** A question without its explanation text: what the practice client is given. */
+export type ProblemCore = Omit<Problem, "explanation">;
+
+export type RenderedProblem = ProblemCore & {
+  html: {
+    prompt: string;
+    choices?: string[];
+    steps: string[];
+    finalAnswer: string;
+    hint: string;
+  };
+};
+
 export type Topic = {
   id: string;
   title: string;

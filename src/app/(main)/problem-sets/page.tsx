@@ -48,7 +48,7 @@ export default async function ProblemSetsPage() {
           groups.map((group) => (
             <section key={group.subjectSlug} className="mt-10">
               <h2 className="border-b theme-border pb-1.5 text-lg font-semibold tracking-tight theme-text">
-                <Link href={`/${group.subjectSlug}`} className="hover:underline">
+                <Link prefetch={false} href={`/${group.subjectSlug}`} className="hover:underline">
                   {group.subjectLabel}
                 </Link>
               </h2>
@@ -59,7 +59,7 @@ export default async function ProblemSetsPage() {
                     className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3"
                   >
                     <div className="min-w-0">
-                      <Link
+                      <Link prefetch={false}
                         href={`/${set.subjectSlug}/test/${set.topicId}`}
                         className="text-[15px] font-medium theme-text hover:underline"
                       >
@@ -71,13 +71,13 @@ export default async function ProblemSetsPage() {
                       </p>
                     </div>
                     <div className="flex shrink-0 gap-4 text-sm">
-                      <Link
+                      <Link prefetch={false}
                         href={`/${set.subjectSlug}/test/${set.topicId}`}
                         className="font-medium text-[var(--accent)] hover:underline"
                       >
                         Question sheet
                       </Link>
-                      <Link
+                      <Link prefetch={false}
                         href={`/${set.subjectSlug}/test/${set.topicId}/answers`}
                         className="theme-text-secondary hover:underline"
                       >
@@ -93,7 +93,7 @@ export default async function ProblemSetsPage() {
 
         <p className="mt-12 border-t theme-border pt-4 text-sm theme-text-secondary">
           More sheets are being written chapter by chapter. Found a mistake in one?{" "}
-          <Link href="/feedback" className="font-medium text-[var(--accent)] underline underline-offset-2">
+          <Link prefetch={false} href="/feedback" className="font-medium text-[var(--accent)] underline underline-offset-2">
             Tell us
           </Link>
           .

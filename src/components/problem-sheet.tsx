@@ -104,11 +104,11 @@ export function ProblemSheet({
   return (
     <main className="ps-sheet">
       <nav className="ps-chrome" data-no-print>
-        <Link href={`/${subjectSlug}/modules/${topicId}`} className="ps-chrome-link">
+        <Link prefetch={false} href={`/${subjectSlug}/modules/${topicId}`} className="ps-chrome-link">
           ← {set.title}
         </Link>
         <span className="ps-chrome-spacer" />
-        <Link href={answersHref} className="ps-chrome-link">
+        <Link prefetch={false} href={answersHref} className="ps-chrome-link">
           All solutions →
         </Link>
       </nav>
@@ -198,7 +198,7 @@ export function ProblemSheet({
       </ol>
 
       <div className="ps-foot">
-        <Link href={answersHref} className="ps-chrome-link" data-no-print>
+        <Link prefetch={false} href={answersHref} className="ps-chrome-link" data-no-print>
           Full solutions sheet →
         </Link>
         <p className="hidden print-only ps-foot-print">
@@ -227,7 +227,7 @@ export function AnswerSheet({
   return (
     <main className="ps-sheet">
       <nav className="ps-chrome" data-no-print>
-        <Link href={questionsHref} className="ps-chrome-link">
+        <Link prefetch={false} href={questionsHref} className="ps-chrome-link">
           ← Question sheet
         </Link>
       </nav>
@@ -273,7 +273,7 @@ export function AnswerSheet({
       </ol>
 
       <div className="ps-foot">
-        <Link href={questionsHref} className="ps-chrome-link" data-no-print>
+        <Link prefetch={false} href={questionsHref} className="ps-chrome-link" data-no-print>
           ← Back to the question sheet
         </Link>
       </div>

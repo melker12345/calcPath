@@ -9,6 +9,7 @@ import {
 } from "@/lib/content/loader";
 import type { SubjectIndex } from "@/lib/content/schema";
 import { listTopicsWithProblemSets } from "@/lib/content/problemset-loader";
+import { renderMathText } from "@/lib/content/render-math";
 
 type Props = {
   params: Promise<{ subject: string }>;
@@ -91,7 +92,10 @@ export default async function SubjectHome({ params }: Props) {
         description={idx.shortDescription}
         subjectSlug={slug}
         topics={bundle.topics}
-        modules={modules}
+        modules={modules.map((m) => ({
+          ...m,
+          sections: m.sections.map((s) => ({ ...s, titleHtml: renderMathText(s.title) })),
+        }))}
         // The contents page only counts questions per chapter, so only the
         // two fields it reads cross to the client.
         problems={bundle.problems.map((p) => ({ id: p.id, topicId: p.topicId }))}

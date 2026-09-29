@@ -8,7 +8,7 @@
 
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import "katex/dist/katex.min.css";
+import { preloadKatexFonts } from "@/lib/katex-assets";
 
 import { AnswerSheet } from "@/components/problem-sheet";
 import { loadSubjectIndex } from "@/lib/content/loader";
@@ -38,6 +38,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function ChapterTestAnswersPage({ params }: Props) {
+  preloadKatexFonts();
   const { subject: slug, topicId } = await params;
 
   const set = await loadProblemSet(slug, topicId);

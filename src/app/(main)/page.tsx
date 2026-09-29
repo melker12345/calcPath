@@ -133,7 +133,7 @@ export default async function Home() {
         <p className="mt-5 text-[15px] theme-text-secondary">
           {primary && (
             <>
-              <Link
+              <Link prefetch={false}
                 href={`/${primary.slug}`}
                 className="font-medium text-[var(--accent)] underline-offset-4 hover:underline"
               >
@@ -144,7 +144,7 @@ export default async function Home() {
               </span>
             </>
           )}
-          <Link
+          <Link prefetch={false}
             href="/subjects"
             className="font-medium text-[var(--accent)] underline-offset-4 hover:underline"
           >
@@ -171,7 +171,7 @@ export default async function Home() {
                     >
                       {subject.icon || "•"}
                     </span>
-                    <Link
+                    <Link prefetch={false}
                       href={`/${subject.slug}`}
                       className="text-[15px] text-[var(--accent)] underline-offset-4 hover:underline"
                     >

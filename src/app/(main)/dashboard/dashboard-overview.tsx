@@ -92,7 +92,7 @@ export function DashboardOverview({ subjects }: { subjects: OverviewSubject[] })
             {rows.map((r) => (
               <tr key={r.slug}>
                 <td className={cell}>
-                  <Link href={`/dashboard/${r.slug}`} className="text-[var(--accent)] hover:underline">
+                  <Link prefetch={false} href={`/dashboard/${r.slug}`} className="text-[var(--accent)] hover:underline">
                     {r.label}
                   </Link>
                 </td>

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAvailableSubjectConfigs, getDashboardDataForSubject } from "@/lib/content/loader";
 import { listTopicsWithProblemSets } from "@/lib/content/problemset-loader";
+import { renderMathText } from "@/lib/content/render-math";
 import { SubjectProgress, type SubjectProgressTopic } from "./subject-progress";
 
 type Props = {
@@ -47,6 +48,7 @@ export default async function SubjectProgressPage({ params }: Props) {
   const topics: SubjectProgressTopic[] = data.topics.map((t) => ({
     ...t,
     hasProblemSet: problemSetTopicIds.includes(t.id),
+    sections: t.sections.map((s) => ({ ...s, titleHtml: renderMathText(s.title) })),
   }));
 
   return (

@@ -36,8 +36,9 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-/** The choices of `questionId` in their display order (a new array). */
-export function orderedChoices(questionId: string, choices: readonly string[] | undefined): string[] {
+/** The choices of `questionId` in their display order (a new array). Works
+ * for any item type, so text and pre-rendered HTML can travel together. */
+export function orderedChoices<T>(questionId: string, choices: readonly T[] | undefined): T[] {
   if (!choices || choices.length < 2) return choices ? [...choices] : [];
   const rand = seededRandom(hashString(questionId));
   const out = [...choices];

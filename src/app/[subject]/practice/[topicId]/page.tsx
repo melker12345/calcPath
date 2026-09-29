@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { preloadKatexFonts } from "@/lib/katex-assets";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -8,6 +9,7 @@ import {
 } from "@/lib/content/loader";
 import { GenericPracticeExperience } from "@/components/generic-practice-experience";
 import { hasProblemSet } from "@/lib/content/problemset-loader";
+import { renderProblem } from "@/lib/content/render-practice";
 import { PracticeErrorBoundary } from "@/components/practice/PracticeErrorBoundary";
 
 interface Props {
@@ -68,6 +70,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PracticePage({ params }: Props) {
+  preloadKatexFonts();
   const { subject: subjectSlug, topicId } = await params;
 
   let bundle;
@@ -90,10 +93,10 @@ export default async function PracticePage({ params }: Props) {
           No practice questions are available for this chapter yet.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <Link href={`/${subjectSlug}/modules/${topicId}`} className="btn-primary">
+          <Link prefetch={false} href={`/${subjectSlug}/modules/${topicId}`} className="btn-primary">
             Read the chapter
           </Link>
-          <Link href={`/${subjectSlug}`} className="btn-secondary">
+          <Link prefetch={false} href={`/${subjectSlug}`} className="btn-secondary">
             All {bundle.config.label} chapters
           </Link>
         </div>
@@ -111,7 +114,7 @@ export default async function PracticePage({ params }: Props) {
       <GenericPracticeExperience
         subjectSlug={subjectSlug}
         topic={topic}
-        problems={topicProblems}
+        problems={topicProblems.map(renderProblem)}
         subjectLabel={bundle.config.label}
         nextTopic={nextTopic ? { id: nextTopic.id, title: nextTopic.title } : undefined}
         hasProblemSet={await hasProblemSet(subjectSlug, topicId)}

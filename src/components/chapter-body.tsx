@@ -94,7 +94,7 @@ export function ChapterBody({
             </div>
             {/* A book's end-of-section exercises. */}
             <p className="mt-5" data-no-print>
-              <Link
+              <Link prefetch={false}
                 href={`/${subjectSlug}/practice/${topicId}?section=${part.id}`}
                 className="text-sm font-medium text-[var(--accent)] underline underline-offset-2"
               >

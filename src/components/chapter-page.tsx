@@ -52,7 +52,7 @@ export function ChapterPage({ chapter }: { chapter: Chapter }) {
             <>
               {" "}
               This chapter also has a{" "}
-              <Link
+              <Link prefetch={false}
                 href={getTestPath(subject.slug, topic.id)}
                 className="font-semibold text-[var(--accent)] underline underline-offset-2"
               >
@@ -67,11 +67,11 @@ export function ChapterPage({ chapter }: { chapter: Chapter }) {
         <div className="mt-8 flex flex-col gap-4 border-t theme-border pt-6" data-no-print>
           <MarkChapterRead subject={subject.slug} topicId={topic.id} />
           <div className="flex flex-wrap gap-3">
-            <Link href={getPracticePath(subject.slug, topic.id)} className="btn-primary inline-flex">
+            <Link prefetch={false} href={getPracticePath(subject.slug, topic.id)} className="btn-primary inline-flex">
               Practice this chapter
             </Link>
             {hasProblemSet && (
-              <Link href={getTestPath(subject.slug, topic.id)} className="btn-secondary inline-flex">
+              <Link prefetch={false} href={getTestPath(subject.slug, topic.id)} className="btn-secondary inline-flex">
                 Printable problem set
               </Link>
             )}
@@ -84,14 +84,14 @@ export function ChapterPage({ chapter }: { chapter: Chapter }) {
           data-no-print
         >
           {prev ? (
-            <Link href={getModulesPath(subject.slug, prev.id)} className="btn-secondary inline-flex w-full justify-center sm:w-auto">
+            <Link prefetch={false} href={getModulesPath(subject.slug, prev.id)} className="btn-secondary inline-flex w-full justify-center sm:w-auto">
               ← {prev.title}
             </Link>
           ) : (
             <span />
           )}
           {next ? (
-            <Link href={getModulesPath(subject.slug, next.id)} className="btn-secondary inline-flex w-full justify-center sm:w-auto">
+            <Link prefetch={false} href={getModulesPath(subject.slug, next.id)} className="btn-secondary inline-flex w-full justify-center sm:w-auto">
               {next.title} →
             </Link>
           ) : (

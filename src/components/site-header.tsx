@@ -80,7 +80,7 @@ function SubjectsDropdown({
         >
           <div className="grid grid-cols-2 gap-0.5 p-1">
             {subjects.map((subject) => (
-              <Link
+              <Link prefetch={false}
                 key={subject.slug}
                 href={`/${subject.slug}`}
                 onClick={closeAndNavigate}
@@ -98,7 +98,7 @@ function SubjectsDropdown({
             ))}
           </div>
           <div className="border-t theme-border" />
-          <Link
+          <Link prefetch={false}
             href="/subjects"
             onClick={closeAndNavigate}
             className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-[var(--accent)] hover:underline"
@@ -167,7 +167,7 @@ function MobileDrawer({
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
           <div className="px-4 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[1px] theme-text-muted">Subjects</div>
           {subjects.map((subject) => (
-            <Link
+            <Link prefetch={false}
               key={subject.slug}
               href={`/${subject.slug}`}
               className="flex items-center gap-3 border theme-border px-4 py-3 text-base font-medium theme-text"
@@ -187,7 +187,7 @@ function MobileDrawer({
           <div className="my-2 border-t theme-border" />
 
           {utilityLinks.map((link) => (
-            <Link
+            <Link prefetch={false}
               key={link.href}
               href={link.href}
               className="flex items-center gap-3 border theme-border px-4 py-3 text-base font-medium theme-text"
@@ -216,7 +216,7 @@ export const SiteHeader = ({ subjects }: { subjects: NavSubject[] }) => {
           keep the default header. */}
       <header className="sticky top-0 z-50 border-b border-[var(--nav-border,var(--border))] bg-[var(--nav-bg,var(--surface-solid))] pt-[env(safe-area-inset-top)]">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Link href="/" className="flex shrink-0 items-center gap-2" aria-label="CalcPath home">
+          <Link prefetch={false} href="/" className="flex shrink-0 items-center gap-2" aria-label="CalcPath home">
             <span className="font-serif text-xl font-semibold theme-text">CalcPath</span>
           </Link>
 
@@ -227,7 +227,7 @@ export const SiteHeader = ({ subjects }: { subjects: NavSubject[] }) => {
             <span className="mx-1 h-3 w-px bg-[var(--border)]" aria-hidden="true" />
 
             {utilityLinks.map((link) => (
-              <Link
+              <Link prefetch={false}
                 key={link.href}
                 href={link.href}
                 className="theme-text-secondary hover:underline"

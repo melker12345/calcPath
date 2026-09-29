@@ -14,7 +14,7 @@ export function SiteFooter() {
     <footer className="border-t theme-border pb-[env(safe-area-inset-bottom)]">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-6 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <p className="theme-text-muted">
-          <Link href="/" className="font-serif text-base font-semibold theme-text">
+          <Link prefetch={false} href="/" className="font-serif text-base font-semibold theme-text">
             CalcPath
           </Link>
           <span className="mx-2" aria-hidden>
@@ -24,7 +24,7 @@ export function SiteFooter() {
         </p>
         <nav aria-label="Footer" className="flex flex-wrap gap-x-5 gap-y-1">
           {links.map((l) => (
-            <Link key={l.href} href={l.href} className="theme-text-secondary hover:underline">
+            <Link prefetch={false} key={l.href} href={l.href} className="theme-text-secondary hover:underline">
               {l.label}
             </Link>
           ))}
