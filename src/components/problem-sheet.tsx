@@ -16,6 +16,7 @@ import type React from "react";
 import Link from "next/link";
 import type { ProblemSetFile, ProblemSetProblem } from "@/lib/content/schema";
 import { renderMathHtml, renderMathParagraphs } from "@/lib/content/problemset-math";
+import { MarkProblemSetDone } from "@/components/mark-problem-set-done";
 
 const KIND_LABEL: Record<ProblemSetProblem["kind"], string> = {
   computation: "Computation",
@@ -111,6 +112,12 @@ export function ProblemSheet({
           All solutions →
         </Link>
       </nav>
+
+      {/* Progress: the learner decides when a sheet counts as done; nothing on
+          paper is graded here. Hidden in print with the rest of the chrome. */}
+      <div className="ps-chrome" data-no-print>
+        <MarkProblemSetDone subject={subjectSlug} topicId={topicId} />
+      </div>
 
       <p className="ps-howto" data-no-print>
         Print this page and work through it on paper. Revealed answers are never

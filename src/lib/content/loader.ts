@@ -40,7 +40,7 @@ import {
   type FileSystemContentBundle,
 } from "./schema";
 
-import { extractMdxSections } from "./mdx";
+import { extractMdxSections, toSlug } from "./mdx";
 import type { Problem, Topic } from "@/lib/shared-types";
 
 /** Subject list entry: index.json metadata + empty content slots filled at call sites. */
@@ -594,42 +594,59 @@ export async function deriveModuleStructureFromBundle(
   }
 }
 
+/** One section of a chapter, with how many practice questions it carries. */
+export type DashboardSection = { slug: string; title: string; total: number };
+
+/** One chapter as the progress pages see it: titles and counts, never questions. */
+export type DashboardTopic = {
+  id: string;
+  title: string;
+  order: number;
+  questionTotal: number;
+  sections: DashboardSection[];
+};
+
+export type DashboardSubjectData = {
+  topics: DashboardTopic[];
+  /**
+   * topicId → section slug → practice question ids. Exact per-chapter and
+   * per-section counts need ids; only the per-subject progress page ships
+   * this (one subject at a time), the overview ships the counts alone.
+   */
+  sectionIds: Record<string, Record<string, string[]>>;
+};
+
 /**
- * Lightweight helper specifically for the dashboard (and similar global aggregates).
- * Returns exactly the data needed for realData: topics (for list), problems (list of {id,topicId,section,...}
- * for getPracticeProgress + getSectionPracticeProgress which rely on stable IDs to compute solved/total
- * by intersecting with client progress state), and modules (slim sections for chapter expandables + per-sec mastery).
- *
- * Implementation:
- * - Uses loadSubjectFromContent(..., {includeMdxModules: false}) to avoid reading/parsing/storing all module.mdx
- *   when only problem IDs are required for progress math.
- * - Uses derive... for modules (which itself is now mdx-light + cached).
- * - Benefits from bundle cache (if a full bundle was loaded by a subject page, light requests get stripped instantly).
- *
- * This + the caches + slim derive is the fix for "Promise.all over 14 subjects, each full bundle + derive reparse".
- * Fidelity preserved 100%: same stable problem ids, same section slugs, full per-topic totals even for 0-progress subjects
- * (so UI shows correct "0 of N" and full chapter trees for every subject).
- *
- * Callers outside dashboard should prefer getFileSystemContentBundle for full (incl mdxSource for rendering).
+ * Data for the progress pages. Loads questions once (no module.mdx) and the
+ * cached section structure, then reduces to titles, counts and id lists —
+ * the old version handed the client every question of every subject.
  */
-export async function getDashboardDataForSubject(slug: string): Promise<{
-  topics: import("./schema").Topic[];
-  problems: import("./schema").Problem[];
-  modules: Array<{ topicId: string; sections: Array<{ title: string; section?: string }> }>;
-}> {
-  try {
-    const [bundleLight, mods] = await Promise.all([
-      loadSubjectFromContent(slug, { includeMdxModules: false }),
-      deriveModuleStructureFromBundle(slug),
-    ]);
-    return {
-      topics: bundleLight.topics,
-      problems: bundleLight.problems,
-      modules: mods,
-    };
-  } catch {
-    return { topics: [], problems: [], modules: [] };
+export async function getDashboardDataForSubject(slug: string): Promise<DashboardSubjectData> {
+  const [bundleLight, mods] = await Promise.all([
+    loadSubjectFromContent(slug, { includeMdxModules: false }),
+    deriveModuleStructureFromBundle(slug),
+  ]);
+  const sectionsByTopic = new Map(mods.map((m) => [m.topicId, m.sections]));
+
+  const sectionIds: Record<string, Record<string, string[]>> = {};
+  for (const p of bundleLight.problems) {
+    const byTopic = (sectionIds[p.topicId] ??= {});
+    (byTopic[p.section] ??= []).push(p.id);
   }
+
+  const topics: DashboardTopic[] = [...bundleLight.topics]
+    .sort((a, b) => a.order - b.order)
+    .map((t) => {
+      const ids = sectionIds[t.id] ?? {};
+      const sections = (sectionsByTopic.get(t.id) ?? []).map((s) => {
+        const sectionSlug = s.section || toSlug(s.title);
+        return { slug: sectionSlug, title: s.title, total: ids[sectionSlug]?.length ?? 0 };
+      });
+      const questionTotal = Object.values(ids).reduce((n, list) => n + list.length, 0);
+      return { id: t.id, title: t.title, order: t.order, questionTotal, sections };
+    });
+
+  return { topics, sectionIds };
 }
 
 /**

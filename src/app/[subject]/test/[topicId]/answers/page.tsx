@@ -12,11 +12,17 @@ import "katex/dist/katex.min.css";
 
 import { AnswerSheet } from "@/components/problem-sheet";
 import { loadSubjectIndex } from "@/lib/content/loader";
-import { loadProblemSet, problemSetMinutes } from "@/lib/content/problemset-loader";
+import { listAllProblemSetParams, loadProblemSet, problemSetMinutes } from "@/lib/content/problemset-loader";
 
 type Props = {
   params: Promise<{ subject: string; topicId: string }>;
 };
+
+/** Every sheet is prerendered at build; there is no on-demand rendering. */
+export async function generateStaticParams() {
+  return listAllProblemSetParams();
+}
+export const dynamicParams = false;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { subject: slug, topicId } = await params;

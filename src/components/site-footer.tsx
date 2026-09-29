@@ -49,11 +49,10 @@ export const SiteFooter = async () => {
 
         <div>
           <h4 className="mb-3 text-xs font-semibold uppercase tracking-wider theme-text-muted">
-            Account
+            Site
           </h4>
           <nav className="flex flex-col gap-2">
-            <Link href="/account" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Profile</Link>
-            <Link href="/account" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Settings</Link>
+            <Link href="/dashboard" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Progress</Link>
             <Link href="/feedback" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Feedback</Link>
           </nav>
         </div>

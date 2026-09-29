@@ -95,6 +95,22 @@ export async function listTopicsWithProblemSets(slug: string): Promise<string[]>
 }
 
 /**
+ * Every (subject, topicId) pair that ships a problem set — the static params
+ * of /[subject]/test/[topicId] and its /answers sibling.
+ */
+export async function listAllProblemSetParams(): Promise<Array<{ subject: string; topicId: string }>> {
+  const { getAvailableSubjectConfigs } = await import("./loader");
+  const subjects = await getAvailableSubjectConfigs();
+  const out: Array<{ subject: string; topicId: string }> = [];
+  for (const subject of subjects) {
+    for (const topicId of await listTopicsWithProblemSets(subject.slug)) {
+      out.push({ subject: subject.slug, topicId });
+    }
+  }
+  return out;
+}
+
+/**
  * Total expected working time for a sheet, in minutes.
  * Printed on the header so a learner knows what they are sitting down to.
  */

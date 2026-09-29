@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { SubjectPracticePage } from "@/components/subject-practice-page";
-import { getDashboardDataForSubject, requireSubjectConfig } from "@/lib/content/loader";
+import { loadSubjectFromContent, requireSubjectConfig } from "@/lib/content/loader";
 
 type Props = { params: Promise<{ subject: string }> };
 
@@ -14,18 +14,15 @@ export default async function PracticeIndex({ params }: Props) {
     notFound();
   }
 
-  const data = await getDashboardDataForSubject(slug).catch(() => ({
-    topics: [] as Awaited<ReturnType<typeof getDashboardDataForSubject>>["topics"],
-    problems: [] as Awaited<ReturnType<typeof getDashboardDataForSubject>>["problems"],
-    modules: [],
-  }));
+  // Topics + questions only (no module.mdx); the page lists chapters to practise.
+  const data = await loadSubjectFromContent(slug, { includeMdxModules: false }).catch(() => null);
 
   return (
     <SubjectPracticePage
       subjectSlug={slug}
       subjectLabel={subject.label}
-      topics={data.topics}
-      problems={data.problems}
+      topics={data?.topics ?? []}
+      problems={data?.problems ?? []}
     />
   );
 }

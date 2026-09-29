@@ -10,7 +10,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = "https://calc-path.com";
 
   // /dashboard is intentionally absent: it is noindex + disallowed in robots.ts
-  // (renders an auth/empty shell to crawlers). Same for /sync and /admin.
+  // (personal progress, empty for crawlers). Same for /admin.
   const staticPages: MetadataRoute.Sitemap = [
     { url: base, lastModified: new Date(), changeFrequency: "weekly", priority: 1.0 },
     { url: `${base}/subjects`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
