@@ -55,7 +55,7 @@ export class PracticeErrorBoundary extends React.Component<
       const { subjectSlug, topicId } = this.props;
       return (
         <main className="mx-auto max-w-3xl p-8">
-          <div className="rounded-2xl border theme-border bg-[var(--surface-2)] p-6">
+          <div className="border theme-border bg-[var(--surface-2)] p-6">
             <h2 className="text-lg font-semibold theme-text mb-2">Practice session error</h2>
             <p className="theme-text-secondary mb-4">
               A session-level render error occurred (most per-question issues are now isolated and auto-skipped by the inner GenericPracticeExperience boundary + tolerant loader).
@@ -74,14 +74,14 @@ export class PracticeErrorBoundary extends React.Component<
               </Link>
               <Link
                 href={`/${subjectSlug}`}
-                className="theme-text-muted hover:text-[var(--accent)] hover:underline"
+                className="theme-text-muted hover:underline"
               >
                 ← Back to all topics
               </Link>
             </div>
             <button
               onClick={this.reset}
-              className="mt-4 text-sm underline theme-text-muted hover:text-[var(--accent)]"
+              className="mt-4 text-sm underline theme-text-muted"
             >
               Try again
             </button>

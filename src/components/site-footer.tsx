@@ -15,7 +15,7 @@ export const SiteFooter = async () => {
           <Link href="/" className="inline-flex items-center gap-2">
             <span className="font-serif text-xl font-semibold theme-text">CalcPath</span>
           </Link>
-          <p className="mt-3 text-sm leading-relaxed text-stone-600 dark:text-[var(--text-muted)] dark:text-[#8b949e]">
+          <p className="mt-3 text-sm leading-relaxed theme-text-muted">
             Free university mathematics notes, examples, and practice.
           </p>
         </div>
@@ -29,7 +29,7 @@ export const SiteFooter = async () => {
               <Link
                 key={subject.slug}
                 href={`/${subject.slug}`}
-                className="text-sm theme-text-secondary hover:theme-text"
+                className="text-sm theme-text-secondary hover:underline"
               >
                 {subject.label}
               </Link>
@@ -42,8 +42,8 @@ export const SiteFooter = async () => {
             Work
           </h4>
           <nav className="flex flex-col gap-2">
-            <Link href="/problem-sets" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Problem sets</Link>
-            <Link href="/about" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">About</Link>
+            <Link href="/problem-sets" className="text-sm theme-text-secondary hover:underline">Problem sets</Link>
+            <Link href="/about" className="text-sm theme-text-secondary hover:underline">About</Link>
           </nav>
         </div>
 
@@ -52,8 +52,8 @@ export const SiteFooter = async () => {
             Site
           </h4>
           <nav className="flex flex-col gap-2">
-            <Link href="/dashboard" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Progress</Link>
-            <Link href="/feedback" className="text-sm text-stone-600 dark:text-[var(--text-muted)] hover:text-stone-950 hover:underline">Feedback</Link>
+            <Link href="/dashboard" className="text-sm theme-text-secondary hover:underline">Progress</Link>
+            <Link href="/feedback" className="text-sm theme-text-secondary hover:underline">Feedback</Link>
           </nav>
         </div>
       </div>

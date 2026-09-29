@@ -127,11 +127,11 @@ export function AdminFeedbackPanel() {
           <p className="mt-1 theme-text-muted">
             {user?.email}
             <span className="mx-2">·</span>
-            <button type="button" onClick={signOut} className="underline underline-offset-2 hover:theme-text">
+            <button type="button" onClick={signOut} className="underline underline-offset-2 hover:underline">
               Sign out
             </button>
             <span className="mx-2">·</span>
-            <button type="button" onClick={fetchRows} className="underline underline-offset-2 hover:theme-text">
+            <button type="button" onClick={fetchRows} className="underline underline-offset-2 hover:underline">
               Refresh
             </button>
           </p>

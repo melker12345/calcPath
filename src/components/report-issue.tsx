@@ -85,7 +85,7 @@ export function ReportIssue({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-sm theme-text-secondary underline underline-offset-2 hover:theme-text"
+        className="text-sm theme-text-secondary underline underline-offset-2 hover:underline"
       >
         Report a problem
       </button>
@@ -157,7 +157,7 @@ export function ReportIssue({
             setStatus("idle");
             setError(null);
           }}
-          className="theme-text-secondary underline underline-offset-2 hover:theme-text"
+          className="theme-text-secondary underline underline-offset-2 hover:underline"
         >
           Cancel
         </button>
