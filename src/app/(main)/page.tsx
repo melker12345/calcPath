@@ -75,6 +75,10 @@ const SUMMARY = [
     def: "Short auto-graded questions that confirm a chapter's methods work. Every one carries a complete worked solution.",
   },
   {
+    term: "Problem sets",
+    def: "Printable sheets worked on paper — proofs, sketches and find-the-error problems that auto-grading cannot ask — with full solutions on a separate page.",
+  },
+  {
     term: "Progress",
     def: "Saved in your browser as you go. No account needed; export it as a file to move it to another device.",
   },
