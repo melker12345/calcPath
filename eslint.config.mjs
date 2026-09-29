@@ -12,10 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    // Backup of legacy code — do not lint or type-check
-    "backup-content/**",
-    // Agent worktrees hold stale checkouts of the repo
+    // Agent worktrees are separate checkouts with their own build output
     ".claude/**",
+    ".worktrees/**",
   ]),
   {
     rules: {
