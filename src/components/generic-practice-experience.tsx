@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { MathText } from "@/components/math-text";
 import { MathInput } from "@/components/math-input";
 import { ReportIssue } from "@/components/report-issue";
-import { useProgress } from "@/components/progress-provider";
+import { useProgress } from "@/lib/use-progress";
 import { isAnswerCorrectAsync, isMcqAnswerCorrect } from "@/lib/answer-check";
 import { detectQuestionContext } from "@/lib/math-input-helpers";
 import { getSectionHref } from "@/lib/subject-urls";

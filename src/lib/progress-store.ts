@@ -1,7 +1,7 @@
 /**
  * The progress store: one module-level copy of the learner's progress, backed
  * by localStorage and shared by every component on the page through
- * `useSyncExternalStore` (see progress-provider.tsx).
+ * `useSyncExternalStore` (see use-progress.ts).
  *
  * Why a store rather than React state in a provider: progress is external
  * state (the browser's storage). Reading it through useSyncExternalStore gives

@@ -1,6 +1,13 @@
-"use client";
+/**
+ * `useProgress()` — the learner's progress for any client component.
+ *
+ * State lives in the module-level store (src/lib/progress-store.ts), backed by
+ * localStorage and read through `useSyncExternalStore`, so there is no
+ * provider to wrap: the hook works anywhere on the client and every component
+ * on a page sees the same value.
+ */
 
-import React, { useMemo, useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import {
   type Attempt,
   type ProgressState,
@@ -17,8 +24,6 @@ import {
   updateProgress,
 } from "@/lib/progress-store";
 
-export { PROGRESS_KEY } from "@/lib/progress-store";
-
 type ProgressContextValue = {
   progress: ProgressState;
   /** False on the server and during hydration, true once the stored state is in use. */
@@ -30,13 +35,6 @@ type ProgressContextValue = {
   /** Replace the stored progress with an imported blob (normalized first). */
   importProgress: (data: unknown) => void;
 };
-
-/**
- * Kept for callers that wrap a subtree in a provider (ProgressBoundary). The
- * state itself lives in the module-level store, so the provider is only a
- * marker: `useProgress()` works anywhere on the client.
- */
-export const ProgressProvider = ({ children }: { children: React.ReactNode }) => <>{children}</>;
 
 const subscribeHydrated = () => () => {};
 

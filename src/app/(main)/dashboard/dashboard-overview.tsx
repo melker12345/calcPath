@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { useProgress } from "@/components/progress-provider";
+import { useProgress } from "@/lib/use-progress";
 import { ProgressTools } from "@/components/progress-tools";
 import { chapterKey, countCorrectInTopic } from "@/lib/progress";
 

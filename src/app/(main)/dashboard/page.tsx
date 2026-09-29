@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { getAvailableSubjectConfigs, getDashboardDataForSubject } from "@/lib/content/loader";
 import { listTopicsWithProblemSets } from "@/lib/content/problemset-loader";
-import { ProgressBoundary } from "@/components/scoped-providers";
 import { DashboardOverview, type OverviewSubject } from "./dashboard-overview";
 
 // Personal page: nothing here is worth indexing, and crawlers see empty counts.
@@ -37,9 +36,5 @@ export default async function DashboardPage() {
     }),
   );
 
-  return (
-    <ProgressBoundary>
-      <DashboardOverview subjects={subjects} />
-    </ProgressBoundary>
-  );
+  return <DashboardOverview subjects={subjects} />;
 }

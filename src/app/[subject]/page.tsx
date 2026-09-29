@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CourseContentsPage } from "@/components/course-contents-page";
-import { ProgressBoundary } from "@/components/scoped-providers";
 import {
   getAvailableSubjectConfigs,
   getFileSystemContentBundle,
@@ -109,24 +108,22 @@ export default async function SubjectHome({ params }: Props) {
       {courseJsonLd && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(courseJsonLd) }} />
       )}
-      <ProgressBoundary>
-        <CourseContentsPage
-          title={subject.label}
-          description={subject.shortDescription}
-          subjectSlug={subject.slug}
-          topics={topics}
-          modules={modules}
-          // The contents page counts questions per chapter; it never renders one.
-          // Sending whole Problems shipped every prompt, answer and explanation
-          // in the subject to draw a progress bar, so only the two fields it
-          // reads cross to the client.
-          // Chapter tests are printable paper sheets now (problemset.json),
-          // and nothing on paper is graded here — so they no longer contribute
-          // to the on-screen "questions done" count.
-          problems={problems.map((p) => ({ id: p.id, topicId: p.topicId }))}
-          problemSetTopicIds={problemSetTopicIds}
+      <CourseContentsPage
+        title={subject.label}
+        description={subject.shortDescription}
+        subjectSlug={subject.slug}
+        topics={topics}
+        modules={modules}
+        // The contents page counts questions per chapter; it never renders one.
+        // Sending whole Problems shipped every prompt, answer and explanation
+        // in the subject to draw a progress bar, so only the two fields it
+        // reads cross to the client.
+        // Chapter tests are printable paper sheets now (problemset.json),
+        // and nothing on paper is graded here — so they no longer contribute
+        // to the on-screen "questions done" count.
+        problems={problems.map((p) => ({ id: p.id, topicId: p.topicId }))}
+        problemSetTopicIds={problemSetTopicIds}
         />
-      </ProgressBoundary>
     </>
   );
 }

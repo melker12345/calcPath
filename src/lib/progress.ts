@@ -1,7 +1,7 @@
 /**
  * Progress model, version 2.
  *
- * Progress lives in the browser only (localStorage, see progress-provider.tsx)
+ * Progress lives in the browser only (localStorage, see progress-store.ts)
  * and can be exported and imported as a JSON file. It records three things:
  *
  *   - practice attempts, and the per-question / per-chapter counts derived
