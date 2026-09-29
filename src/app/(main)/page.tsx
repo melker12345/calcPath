@@ -76,7 +76,7 @@ const SUMMARY = [
   },
   {
     term: "Progress",
-    def: "Saved on your device as you go. No account needed; a PIN can back it up across devices.",
+    def: "Saved in your browser as you go. No account needed; export it as a file to move it to another device.",
   },
 ];
 

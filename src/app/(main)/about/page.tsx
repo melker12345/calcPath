@@ -89,13 +89,11 @@ export default async function AboutPage() {
         <p>
           There are no accounts. Progress is stored in your browser and never
           tied to an identity. If you want it on another device, the{" "}
-          <Link href="/sync" className="font-medium text-[var(--accent)] underline underline-offset-2 hover:opacity-80">
-            sync page
+          <Link href="/dashboard" className="font-medium text-[var(--accent)] underline underline-offset-2">
+            progress page
           </Link>{" "}
-          creates a PIN + password backup you can restore anywhere — that backup
-          holds only your progress, nothing personal. Site analytics are
-          in-house and anonymous: no personal data, no IP addresses, no
-          third-party trackers, no ads.
+          exports it as a file you can import elsewhere. There are no
+          analytics, no trackers and no ads.
         </p>
       </Section>
 

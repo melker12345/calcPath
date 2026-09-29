@@ -46,13 +46,6 @@ export async function getSearchIndex(): Promise<SearchEntry[]> {
         subjectIcon: icon,
         kind: "page",
       });
-      entries.push({
-        label: `${name} Progress`,
-        description: "Your progress",
-        href: `/dashboard`,
-        subjectIcon: icon,
-        kind: "page",
-      });
 
       // Topics + sections from real data
       const modulesByTopic = new Map(

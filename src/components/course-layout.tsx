@@ -1,4 +1,5 @@
 import { SiteHeader } from "@/components/site-header";
+import { SiteFooter } from "@/components/site-footer";
 import type { NavSubject } from "@/lib/subjects";
 import { subjectThemeClass, type SubjectTheme } from "@/lib/themes";
 
@@ -16,7 +17,6 @@ export async function CourseLayout({
       the site light/dark toggle. */
   theme?: SubjectTheme | null;
 }) {
-  const { SiteFooter } = await import("@/components/site-footer");
   const themeClass = theme ? ` ${subjectThemeClass(theme.slug)}` : "";
 
   return (
