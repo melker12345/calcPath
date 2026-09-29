@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
@@ -16,9 +15,10 @@ interface Props {
 }
 
 /**
- * Every chapter's practice page is prerendered at build time. The optional
- * `?section=` and `?focus=` query parameters are read on the client (inside
- * GenericPracticeExperience), so the route never touches searchParams.
+ * Every chapter's practice page is prerendered at build time, first question
+ * included. The optional `?section=` and `?focus=` query parameters are read
+ * on the client after mount (inside GenericPracticeExperience), so the route
+ * never touches searchParams and never bails out to client-side rendering.
  */
 export const dynamicParams = false;
 
@@ -108,17 +108,14 @@ export default async function PracticePage({ params }: Props) {
 
   return (
     <PracticeErrorBoundary subjectSlug={subjectSlug} topicId={topicId}>
-      {/* useSearchParams inside needs a Suspense boundary for static rendering. */}
-      <Suspense fallback={null}>
-        <GenericPracticeExperience
-          subjectSlug={subjectSlug}
-          topic={topic}
-          problems={topicProblems}
-          subjectLabel={bundle.config.label}
-          nextTopic={nextTopic ? { id: nextTopic.id, title: nextTopic.title } : undefined}
-          hasProblemSet={await hasProblemSet(subjectSlug, topicId)}
-        />
-      </Suspense>
+      <GenericPracticeExperience
+        subjectSlug={subjectSlug}
+        topic={topic}
+        problems={topicProblems}
+        subjectLabel={bundle.config.label}
+        nextTopic={nextTopic ? { id: nextTopic.id, title: nextTopic.title } : undefined}
+        hasProblemSet={await hasProblemSet(subjectSlug, topicId)}
+      />
     </PracticeErrorBoundary>
   );
 }
