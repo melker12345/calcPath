@@ -13,6 +13,9 @@ interface MathInputProps {
   onHint?: () => void;
   hintDisabled?: boolean;
   placeholder?: string;
+  /** Replaces the default "Your answer / Hint" header row (e.g. the graded
+      "Not quite" state), so the panel keeps its size between states. */
+  header?: React.ReactNode;
   questionContext?: QuestionContext;
   answerHint?: string;
   /** Changing prompt → the field is re-focused. */
@@ -143,6 +146,7 @@ export function MathInput({
   onHint,
   hintDisabled,
   placeholder = "Your answer",
+  header,
   questionContext,
   answerHint,
   questionPrompt,
@@ -245,20 +249,22 @@ export function MathInput({
 
   return (
     <div className="flex flex-col border theme-border bg-[var(--surface)]">
-      {/* Header: label + hint */}
-      <div className="flex items-center justify-between border-b theme-border px-3 py-2">
-        <p className="text-sm theme-text-muted">{placeholder}</p>
-        {onHint && (
-          <button
-            type="button"
-            onClick={onHint}
-            disabled={hintDisabled}
-            className="border theme-border bg-[var(--surface)] px-2.5 py-1 text-xs font-medium theme-text disabled:opacity-40"
-          >
-            Hint
-          </button>
-        )}
-      </div>
+      {/* Header: label + hint, or the graded state handed in by the caller */}
+      {header ?? (
+        <div className="flex min-h-[41px] items-center justify-between border-b theme-border px-3 py-2">
+          <p className="text-sm theme-text-muted">{placeholder}</p>
+          {onHint && (
+            <button
+              type="button"
+              onClick={onHint}
+              disabled={hintDisabled}
+              className="border theme-border bg-[var(--surface)] px-2.5 py-1 text-xs font-medium theme-text disabled:opacity-40"
+            >
+              Hint
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Math field. Enter submits: caught at the wrapper (the event bubbles up
           from MathQuill's hidden textarea) instead of via config.handlers.enter,

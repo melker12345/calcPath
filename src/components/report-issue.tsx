@@ -93,12 +93,13 @@ export function ReportIssue({
   }
 
   return (
-    <form onSubmit={submit} className="border theme-border bg-[var(--surface)] p-4 text-sm">
-      <fieldset>
-        <legend className="mb-2 font-medium theme-text">
-          {target.kind === "question" ? "What is wrong with this question?" : "What is wrong with this section?"}
-        </legend>
-        <div className="flex flex-col gap-1.5">
+    <form onSubmit={submit} className="border theme-border bg-[var(--surface)] text-sm">
+      <p className="border-b theme-border px-3 py-2 text-sm font-semibold theme-text">
+        {target.kind === "question" ? "Report a problem with this question" : "Report a problem with this section"}
+      </p>
+      <fieldset className="px-3 pt-3 sm:px-4">
+        <legend className="sr-only">Reason</legend>
+        <div className="grid gap-x-6 gap-y-1.5 sm:grid-cols-2">
           {reasons.map((r) => (
             <label key={r} className="flex cursor-pointer items-center gap-2 theme-text-secondary">
               <input
@@ -115,14 +116,15 @@ export function ReportIssue({
         </div>
       </fieldset>
 
-      <label htmlFor={`${uid}-message`} className="mt-4 block font-medium theme-text">
+      <div className="px-3 pb-3 sm:px-4">
+      <label htmlFor={`${uid}-message`} className="mt-3 block font-medium theme-text">
         Details {needsMessage ? "(required)" : "(optional)"}
       </label>
       <textarea
         id={`${uid}-message`}
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        rows={4}
+        rows={3}
         maxLength={max}
         required={needsMessage}
         placeholder={
@@ -161,6 +163,7 @@ export function ReportIssue({
         >
           Cancel
         </button>
+      </div>
       </div>
     </form>
   );

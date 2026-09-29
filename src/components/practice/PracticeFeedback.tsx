@@ -173,6 +173,8 @@ interface PracticeFeedbackProps {
   finalAnswer: string;
   /** On a correct answer to the final question the button reads "Finish". */
   isLastQuestion?: boolean;
+  /** Rendered inside the answer panel as its header row (no outer border). */
+  embedded?: boolean;
 }
 
 /**
@@ -196,6 +198,7 @@ export function PracticeFeedback({
   getHint,
   finalAnswer,
   isLastQuestion = false,
+  embedded = false,
 }: PracticeFeedbackProps) {
   if (!feedback) return null;
 
@@ -223,19 +226,23 @@ export function PracticeFeedback({
         role="status"
         aria-live="polite"
         aria-atomic="true"
-        className="border theme-border bg-[var(--surface)] p-4 sm:p-5"
+        className="flex h-full min-h-0 flex-col border theme-border bg-[var(--surface)]"
       >
-        <p className="text-base font-semibold theme-text sm:text-lg">
+        <p className="min-h-[41px] border-b theme-border px-3 py-2 text-sm font-semibold theme-text">
           {isCorrect ? "Correct" : "Not quite. Here is the solution."}
         </p>
-        <div className="mt-3">{renderSteps()}</div>
-        <p className="mt-4 border-t theme-border pt-3 text-sm theme-text sm:text-base">
-          <span className="font-semibold">Answer: </span>
-          <MathText text={finalAnswer} />
-        </p>
-        <button type="button" onClick={onNext} className="btn-primary mt-4 w-full sm:w-auto">
-          {isCorrect && isLastQuestion ? "Finish" : "Next question"}
-        </button>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-5">
+          {renderSteps()}
+          <p className="mt-4 border-t theme-border pt-3 text-sm theme-text sm:text-base">
+            <span className="font-semibold">Answer: </span>
+            <MathText text={finalAnswer} />
+          </p>
+        </div>
+        <div className="border-t theme-border px-3 py-3">
+          <button type="button" onClick={onNext} className="btn-primary w-full sm:w-auto">
+            {isCorrect && isLastQuestion ? "Finish" : "Next question"}
+          </button>
+        </div>
       </div>
     );
   }
@@ -256,7 +263,7 @@ export function PracticeFeedback({
       role="status"
       aria-live="polite"
       aria-atomic="true"
-      className="flex flex-col gap-2 border theme-border bg-[var(--surface-2)] px-3 py-2 sm:px-4"
+      className={`flex min-h-[41px] flex-col justify-center gap-2 bg-[var(--surface-2)] px-3 py-2 sm:px-4 ${embedded ? "border-b theme-border" : "border theme-border"}`}
     >
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
         <span className="text-sm font-semibold theme-text">{heading}</span>

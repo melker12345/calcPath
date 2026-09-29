@@ -1,7 +1,7 @@
 import Link from "next/link";
+import { subjectThemeClass } from "@/lib/themes";
 import {
   JsonLd,
-  LANDING_FAQ,
   buildLandingJsonLd,
   buildLandingMetadata,
   getLandingData,
@@ -16,7 +16,7 @@ import {
  * course content's voice — module pages are typeset as a book — and keeping the
  * chrome sans is what stops the home page reading like a book jacket.
  *
- * Server Component: the catalogue and FAQ render as crawlable HTML with no
+ * Server Component: the catalogue renders as crawlable HTML with no
  * client JS. The catalogue comes from getLandingData(), which wraps
  * getAvailableSubjectConfigs() auto-discovery, so a newly dropped content/
  * folder appears here with no code change. SEO/JSON-LD come from
@@ -108,7 +108,7 @@ export default async function Home() {
 
   return (
     <div className="theme-bg theme-text">
-      {/* Structured data (EducationalOrganization + Course ItemList + FAQPage).
+      {/* Structured data (EducationalOrganization + Course ItemList).
           The org node reuses the same @id as the root layout's Organization node
           so crawlers merge them. Exactly one set of nodes on this page. */}
       <JsonLd data={buildLandingJsonLd(data)} />
@@ -165,6 +165,12 @@ export default async function Home() {
               <ul className="mt-2 space-y-1">
                 {list.map((subject) => (
                   <li key={subject.slug} className="flex items-baseline gap-2">
+                    <span
+                      aria-hidden
+                      className={`w-5 shrink-0 text-center font-serif text-[var(--subject-accent,var(--text-muted))] ${subjectThemeClass(subject.slug)}`}
+                    >
+                      {subject.icon || "•"}
+                    </span>
                     <Link
                       href={`/${subject.slug}`}
                       className="text-[15px] text-[var(--accent)] underline-offset-4 hover:underline"
@@ -196,30 +202,6 @@ export default async function Home() {
             </div>
           ))}
         </dl>
-
-        {/* FAQ — collapsed by default so it stays a footnote rather than half
-            the page. The FAQPage JSON-LD mirrors these exact pairs. */}
-        <h2 className="mt-12 border-b theme-border pb-1.5 text-lg font-semibold tracking-tight theme-text">
-          Frequently asked
-        </h2>
-        <div className="mt-3 divide-y theme-border border-b theme-border">
-          {LANDING_FAQ.map((f) => (
-            <details key={f.q} className="group py-2.5">
-              <summary className="flex cursor-pointer items-baseline gap-2 text-[15px] font-medium theme-text marker:content-['']">
-                <span
-                  aria-hidden
-                  className="text-xs theme-text-muted group-open:rotate-90"
-                >
-                  &#9656;
-                </span>
-                {f.q}
-              </summary>
-              <p className="mt-1.5 pl-5 text-[15px] leading-relaxed theme-text-secondary">
-                {f.a}
-              </p>
-            </details>
-          ))}
-        </div>
       </main>
 
     </div>

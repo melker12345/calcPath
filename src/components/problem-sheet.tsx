@@ -73,7 +73,7 @@ function SheetHead({
       <p className="ps-meta">
         {set.problems.length} questions · about {totalMinutes} minutes
       </p>
-      <p className="ps-instructions">{set.instructions}</p>
+      <p className="ps-instructions" dangerouslySetInnerHTML={{ __html: renderMathHtml(set.instructions) }} />
       {/* Only on paper: a blank name line on screen is furniture, on paper it is
           the first thing a learner fills in. */}
       {nameLine && (

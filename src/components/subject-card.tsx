@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { subjectThemeClass } from "@/lib/themes";
 
 /**
  * Subject card for the /subjects catalogue. Plain bordered box, server
@@ -26,6 +27,7 @@ export type SubjectCardData = {
 };
 
 export function SubjectCard({ subject }: { subject: SubjectCardData }) {
+  const themeClass = subjectThemeClass(subject.slug);
   const glyph = subject.icon || subject.label.charAt(0).toUpperCase();
   const chapterLabel =
     subject.topicCount === 1 ? "1 chapter" : `${subject.topicCount ?? 0} chapters`;
@@ -36,7 +38,10 @@ export function SubjectCard({ subject }: { subject: SubjectCardData }) {
   return (
     <Link href={`/${subject.slug}`} className="flex flex-col border theme-border bg-[var(--surface)] p-5">
       <div className="flex items-start justify-between gap-3">
-        <span aria-hidden className="font-serif text-2xl leading-none theme-text">
+        <span
+          aria-hidden
+          className={`font-serif text-2xl leading-none text-[var(--subject-accent,var(--accent))] ${themeClass}`}
+        >
           {glyph}
         </span>
         {categoryLabel && (

@@ -64,6 +64,21 @@ const unavailable = () =>
 
 const bad = (error: string) => NextResponse.json({ error }, { status: 400 });
 
+/**
+ * A missing `reports` table is a setup problem, not a bug in the request, so
+ * the client is told exactly what to do instead of a generic failure.
+ */
+function tableMissing(error: { message?: string; code?: string }): NextResponse | null {
+  const msg = error.message ?? "";
+  if (error.code === "42P01" || error.code === "PGRST205" || /schema cache|does not exist/i.test(msg)) {
+    return NextResponse.json(
+      { error: "The reports table does not exist yet. Run supabase/schema.sql in the Supabase SQL editor." },
+      { status: 503 },
+    );
+  }
+  return null;
+}
+
 function optionalSlug(v: unknown, name: string): { value: string | null } | { error: string } {
   if (v === undefined || v === null || v === "") return { value: null };
   if (typeof v !== "string" || !SLUG_RE.test(v)) return { error: `${name} must be a short kebab-case id` };
@@ -150,7 +165,7 @@ export async function POST(request: Request) {
   if (error) {
     // Schema problems stay in the server log; the client gets a generic message.
     console.error("Report insert error:", error.message, error.details, error.hint);
-    return NextResponse.json({ error: "Failed to save the report" }, { status: 500 });
+    return tableMissing(error) ?? NextResponse.json({ error: "Failed to save the report" }, { status: 500 });
   }
   return NextResponse.json({ ok: true, id: data?.id ?? null });
 }
@@ -214,7 +229,7 @@ export async function GET(request: Request) {
   const { data, error } = await query;
   if (error) {
     console.error("Report fetch error:", error.message);
-    return NextResponse.json({ error: "Failed to fetch reports" }, { status: 500 });
+    return tableMissing(error) ?? NextResponse.json({ error: "Failed to fetch reports" }, { status: 500 });
   }
   return NextResponse.json({ reports: data ?? [] });
 }
@@ -244,7 +259,7 @@ export async function PATCH(request: Request) {
     .in("id", ids);
   if (error) {
     console.error("Report status update error:", error.message);
-    return NextResponse.json({ error: "Failed to update reports" }, { status: 500 });
+    return tableMissing(error) ?? NextResponse.json({ error: "Failed to update reports" }, { status: 500 });
   }
   return NextResponse.json({ ok: true, ids, status });
 }

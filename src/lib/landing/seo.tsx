@@ -59,29 +59,6 @@ export async function getLandingData(): Promise<LandingData> {
   };
 }
 
-export const LANDING_FAQ: Array<{ q: string; a: string }> = [
-  {
-    q: "Is CalcPath free?",
-    a: "Yes. CalcPath is completely free — every chapter, worked example, practice problem and problem set is available with no subscription, no paywall and no advertising.",
-  },
-  {
-    q: "Do I need to create an account to use CalcPath?",
-    a: "No. There are no accounts. You can read every chapter and solve every practice problem without signing up; your progress is saved in your browser, and you can export it as a file to move it to another device.",
-  },
-  {
-    q: "What level is the material aimed at?",
-    a: "CalcPath covers first-year university and advanced high-school mathematics: single- and multivariable calculus, linear algebra, statistics, and precalculus foundations. It suits university students, self-learners, and anyone preparing for exams.",
-  },
-  {
-    q: "Does CalcPath include practice problems with solutions?",
-    a: "Yes. Every topic pairs concise explanations with practice problems that have full, step-by-step worked solutions, plus printable problem sets to work on paper.",
-  },
-  {
-    q: "How is CalcPath different from other free math sites?",
-    a: "CalcPath combines clear, derivation-first reference notes with an integrated practice engine and progress tracking in one place — read the theory, then immediately practise it, without switching between a textbook and a separate problem set.",
-  },
-];
-
 /**
  * Consistent metadata for the landing page and its design references.
  * `path` is the route: "/" for the real landing page, "/1", "/3", "/4", "/5"
@@ -144,7 +121,7 @@ export function buildLandingMetadata(opts: {
   };
 }
 
-/** schema.org @graph: EducationalOrganization + ItemList(Course) + FAQPage. */
+/** schema.org @graph: EducationalOrganization + ItemList(Course). */
 export function buildLandingJsonLd(data: LandingData) {
   return {
     "@context": "https://schema.org",
@@ -180,14 +157,6 @@ export function buildLandingJsonLd(data: LandingData) {
               category: "Free",
             },
           },
-        })),
-      },
-      {
-        "@type": "FAQPage",
-        mainEntity: LANDING_FAQ.map((f) => ({
-          "@type": "Question",
-          name: f.q,
-          acceptedAnswer: { "@type": "Answer", text: f.a },
         })),
       },
     ],

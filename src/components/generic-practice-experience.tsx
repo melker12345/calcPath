@@ -295,6 +295,7 @@ export function GenericPracticeExperience({
       getHint={getHint}
       finalAnswer={finalAnswer}
       isLastQuestion={index === displayProblems.length - 1}
+      embedded={current.type !== "mcq" && feedback.type === "incorrect" && !feedback.showSolution}
     />
   ) : null;
   // Correct, or the full solution: the card replaces the input.
@@ -305,7 +306,7 @@ export function GenericPracticeExperience({
   const allSolved = solvedCount >= displayProblems.length;
 
   const navButton =
-    "flex h-9 min-w-9 items-center justify-center border theme-border px-2 text-sm theme-text disabled:opacity-40";
+    "flex h-9 min-w-9 items-center justify-center whitespace-nowrap border theme-border px-2 text-sm theme-text disabled:opacity-40";
   const quietLink = "text-sm theme-text-muted hover:underline";
 
   return (
@@ -397,14 +398,17 @@ export function GenericPracticeExperience({
             {feedbackEl}
           </div>
         ) : (
-          /* Typed answers: a plain incorrect verdict shows as a banner above
-             the input, which stays editable with the attempt still in it. A
-             correct grade or the full solution replaces the input. */
-          <div className="flex flex-col gap-3">
-            {feedbackEl && !isFullFeedback && feedbackEl}
-            {isFullFeedback ? (
-              feedbackEl
-            ) : (
+          /* Typed answers. The panel keeps one size in every state: a plain
+             incorrect verdict becomes the panel's header row (the input stays
+             editable with the attempt still in it), and a correct grade or the
+             full solution is laid over the panel in the same grid cell, so the
+             page never jumps between "Your answer", "Not quite" and "Correct". */
+          <div className="grid">
+            <div
+              className={`col-start-1 row-start-1 ${isFullFeedback ? "invisible" : ""}`}
+              inert={isFullFeedback || undefined}
+              aria-hidden={isFullFeedback || undefined}
+            >
               <MathInput
                 value={answer}
                 onChange={setAnswer}
@@ -415,10 +419,14 @@ export function GenericPracticeExperience({
                 }}
                 onHint={useHint}
                 hintDisabled={feedback?.type === "incorrect" && feedback.hintUsed}
+                header={feedbackEl && !isFullFeedback ? feedbackEl : undefined}
                 questionContext={questionContext}
                 answerHint={current.answer}
                 questionPrompt={current.prompt}
               />
+            </div>
+            {isFullFeedback && (
+              <div className="col-start-1 row-start-1 min-h-0 overflow-hidden">{feedbackEl}</div>
             )}
           </div>
         )}
@@ -493,16 +501,6 @@ export function GenericPracticeExperience({
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
           {/* The stable id, as stored in questions.json: what a report points at. */}
           <code className="text-xs theme-text-muted">{current.id}</code>
-          <ReportIssue
-            target={{
-              kind: "question",
-              subject: subjectSlug,
-              topicId,
-              questionId: current.id,
-              section: current.section,
-            }}
-            context={reportContext}
-          />
           {hasProblemSet && (
             <Link className={quietLink} href={`/${subjectSlug}/test/${topicId}`}>
               Problem set
@@ -512,6 +510,21 @@ export function GenericPracticeExperience({
             All {subjectLabel} chapters
           </Link>
         </div>
+      </div>
+
+      {/* Report row: the form opens full width below the navigation. */}
+      <div className="mt-3">
+        <ReportIssue
+          key={current.id}
+          target={{
+            kind: "question",
+            subject: subjectSlug,
+            topicId,
+            questionId: current.id,
+            section: current.section,
+          }}
+          context={reportContext}
+        />
       </div>
     </div>
   );
