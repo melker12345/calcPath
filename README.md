@@ -1,35 +1,57 @@
 # CalcPath
 
-Free, self-contained university mathematics courses. Step-by-step explanations (via content-driven MDX), interactive practice with instant feedback + MathInput, and local progress tracking.
+Free university mathematics, written to transfer information well: textbook
+chapters, practice questions graded in the browser, and printable problem
+sets. No accounts, no analytics, no advertising. Progress is kept in the
+reader's browser.
 
-New subjects are added by simply dropping a folder into `content/<slug>/` (index.json + topics/... with questions.json + module.mdx). Zero code changes required. Full auto-discovery powers routes, navbar (via dynamic dropdown), /subjects listing, dashboard, sitemap, search, etc.
+## Layout
 
-Run `npm run content:validate` after edits — it enforces schemas + the hard requirement that every question.section matches a heading in the topic's module.mdx.
+```
+content/<subject>/
+  index.json                 subject metadata + ordered chapter list
+  topics/<chapter>/
+    index.json               chapter title, description, order, estimatedMinutes
+    module.mdx               the chapter, in the house style (content/STYLE.md)
+    questions.json           auto-graded practice questions (content/questions.md)
+    problemset.json          optional printable chapter test (content/ARCHITECTURE.md)
+src/app/                     routes (Next.js app router)
+src/components/              UI
+src/lib/content/             loader, schema, MDX section extraction, figures
+src/lib/answer-check.ts      grading
+scripts/                     content gates and audits
+docs/CONTENT-BACKLOG.md      known content problems, measured
+```
 
-## Current Subjects (dynamic)
+Dropping a new `content/<subject>/` folder adds the subject everywhere: routes,
+navigation, sitemap, search.
 
-- Calculus
-- Statistics
-- Linear Algebra
+## Commands
 
+```
+npm run dev                  # never assume port 3000 is free
+npm run build                # passes with no environment variables set
+npm run lint && npx tsc --noEmit
+npm test                     # unit tests (grading, section slugs, parsers)
 
+npm run content:validate     # schemas; every question.section ↔ a module.mdx section
+npm run content:latex        # every LaTeX fragment renders under KaTeX
+npm run content:answers      # every stored answer grades itself correct, respelled
+npm run content:problemsets  # problem-set schema, corpus-wide ids, LaTeX
+npm run content:audit        # book-style coverage; fails if prose is lost
 
-## Features
+npm run content:figures      # every :::figure spec parses and draws
+npm run content:contrast     # theme tokens against WCAG AA
+npx tsx scripts/audit-explanations.ts   # duplicated prose, prose inside $…$
+```
 
-- **Dynamic subjects** — Add more by dropping content/ folders (JSON + MDX); everything auto-wires (home, modules, practice, etc.)
-- **Rich explanations** — Textbook layout: numbered chapters and sections, numbered math-book environments (definitions, theorems, proofs, examples, intuition asides) via `:::` fences in MDX, displayed equations, serif book typography. See `content/STYLE.md`.
-- **Practice** — Numeric/MCQ questions with MathInput (keypad + suggestions), hints, solutions, mastery tracking
-- **Topic tests** (Calculus) — Dedicated per-topic tests via the app's /<subject>/test/ feature
-- **Local progress + sync** — Everything stored locally (no account required). Use the account page to back up and restore across devices via a 6-digit PIN + password (no PII, no emails); progress merges convergently so syncing never loses completed work
-- **Donations** — Optional one-time support via Stripe
+The five `content:*` gates plus lint, typecheck, tests and build are green
+before a commit on `dev`.
 
-## Tech Stack
+## Services
 
-- Next.js 16 + React 19 + Tailwind
-- Content-driven data (content/ + loader + generics; no per-subject JS)
-- KaTeX + react-mathquill for math
-- Supabase (for feedback + ephemeral sync snapshots only)
-- Stripe
+Supabase holds feedback reports (`supabase/schema.sql`) and the single admin
+login for reading them. Both are optional: without the environment variables
+the site builds and runs, and the report form simply cannot post.
 
-See `content/ARCHITECTURE.md` for how to author new subjects.
-
+See `CLAUDE.md` for the project rules.

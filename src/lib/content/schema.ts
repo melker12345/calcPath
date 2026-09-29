@@ -139,53 +139,6 @@ export const TopicSchema = z.object({
 export type Topic = z.infer<typeof TopicSchema>;
 
 // ============================================
-// Module Content (Explanations)
-// ============================================
-
-export const WorkedExampleSchema = z.object({
-  title: z.string().min(1),
-  steps: z.array(z.string().min(1)).min(1),
-});
-
-export const ModuleSectionSchema = z.object({
-  title: z.string().min(1),
-
-  /**
-   * Stable slug. Must exactly match the `section` on associated Problems.
-   * This is critical for deep linking and per-section progress tracking.
-   * (See getSectionPracticeProgress, dashboard, search-command, module nav.)
-   */
-  section: z.string().min(1).optional(),
-
-  /** Main explanatory content (array of paragraphs / steps) */
-  body: z.array(z.string().min(1)).min(1),
-
-  /** Simpler, intuition-first explanations (ELI5) */
-  eli5: z.array(z.string().min(1)).optional(),
-
-  /** Inline worked examples for this specific section */
-  examples: z.array(WorkedExampleSchema).optional(),
-});
-
-export const ModuleContentSchema = z.object({
-  topicId: z.string().min(1),
-  title: z.string().min(1),
-
-  /** High-level introduction to the entire topic (shown at the top of the module page) */
-  intro: z.array(z.string().min(1)).min(1),
-
-  sections: z.array(ModuleSectionSchema).min(1),
-
-  /** Top-level worked examples for the whole topic (less common than per-section examples) */
-  examples: z.array(WorkedExampleSchema),
-
-  /** Common mistakes / misconceptions for this topic */
-  commonMistakes: z.array(z.string().min(1)),
-});
-
-export type ModuleContent = z.infer<typeof ModuleContentSchema>;
-
-// ============================================
 // Subject Level
 // ============================================
 
@@ -205,54 +158,6 @@ export const SubjectConfigSchema = z.object({
 });
 
 export type SubjectConfig = z.infer<typeof SubjectConfigSchema>;
-
-/**
- * Slim section summary used by legacy dashboard / search / subjects.ts for per-chapter sections.
- * Can be derived from full ModuleContent.sections at load time.
- * Kept here for adapter compatibility during migration.
- */
-export const ModuleSectionSummarySchema = z.object({
-  title: z.string().min(1),
-  section: z.string().min(1).optional(),
-});
-export type ModuleSectionSummary = z.infer<typeof ModuleSectionSummarySchema>;
-
-// ============================================
-// Full Subject Bundle (what a content folder will eventually export)
-// ============================================
-
-/**
- * A complete, validated, self-contained bundle for one subject.
- * This is what the content loader will return for a given slug.
- *
- * In the thin vertical slice + future:
- * - One folder or file per subject produces one of these.
- * - Generic pages consume bundles without subject-specific imports.
- *
- * Note: The legacy SubjectConfig in subjects.ts also carries topics/problems/modules
- * for the transition period. New code should prefer SubjectBundle.
- */
-export const SubjectBundleSchema = z.object({
-  config: SubjectConfigSchema,
-  topics: z.array(TopicSchema),
-  problems: z.array(ProblemSchema),
-  modules: z.array(ModuleContentSchema),
-});
-
-export type SubjectBundle = z.infer<typeof SubjectBundleSchema>;
-
-// ============================================
-// Schema Versioning
-// ============================================
-
-export const CONTENT_SCHEMA_VERSION = "1.0.0" as const;
-
-export const ContentManifestSchema = z.object({
-  version: z.literal(CONTENT_SCHEMA_VERSION),
-  subjects: z.array(SubjectSlugSchema),
-});
-
-export type ContentManifest = z.infer<typeof ContentManifestSchema>;
 
 // ============================================
 // New: Filesystem-based Content (JSON + MDX per ARCHITECTURE.md)
@@ -347,7 +252,6 @@ export type MdxModule = z.infer<typeof MdxModuleSchema>;
  * (JSON metadata + questions + MDX explanations).
  *
  * This is the target shape for the primary data-driven loader (official architecture).
- * Distinct from legacy SubjectBundle during the transition period (see git history + NOTES.md).
  *
  * Populated from the full content/{subject}/ structures for all subjects.
  */

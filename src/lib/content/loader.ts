@@ -25,10 +25,7 @@
 import "server-only";
 
 import {
-  SubjectBundleSchema,
-  type SubjectBundle,
   type SubjectConfig,
-  ModuleSectionSummarySchema,
   // New FS content schemas (JSON + MDX)
   SubjectIndexSchema,
   type SubjectIndex,
@@ -70,38 +67,6 @@ export function subjectConfigFromIndex(idx: SubjectIndex): ListedSubjectConfig {
 export async function requireSubjectConfig(slug: string): Promise<ListedSubjectConfig> {
   const idx = await loadSubjectIndex(slug);
   return subjectConfigFromIndex(idx);
-}
-
-// ============================================
-// Linear Algebra (first for thin vertical slice)
-// ============================================
-
-const linalgConfig: SubjectConfig = {
-  slug: "linear-algebra",
-  label: "Linear Algebra",
-  shortDescription:
-    "A free linear algebra course covering systems, vectors, matrices, determinants, vector spaces, orthogonality, eigenvalues, and symmetric matrices.",
-  modulesDescription:
-    "Read the linear algebra chapters in order, or jump directly to the topic you need.",
-  icon: "λ",
-  order: 2,
-};
-
-/**
- * Returns the fully validated Linear Algebra content bundle (compat adapter path).
- * Prefer getFileSystemContentBundle("linear-algebra") for new code.
- * Dummies for linalg* (previously related to retired subject-topics shim lists) removed;
- * this is now a minimal compat bridge (only LA is wired here; others via FS). Shims fully retired.
- * get*Bundle kept only for a couple of compat paths (most call sites now use getFileSystemContentBundle directly).
- */
-export function getLinearAlgebraBundle(): SubjectBundle {
-  const raw = {
-    config: linalgConfig,
-    topics: [],
-    problems: [],
-    modules: [],
-  };
-  return SubjectBundleSchema.parse(raw);
 }
 
 // ============================================
@@ -453,64 +418,6 @@ export async function loadSubjectFromContent(
 // Adapter / Validation helpers (for compat & other subjects)
 // ============================================
 
-/**
- * Validates arbitrary raw data against the SubjectBundle schema.
- * Throws with Zod errors on failure (good messages for authoring).
- * Use this in future JSON loaders.
- */
-export function validateSubjectBundle(raw: unknown): SubjectBundle {
-  return SubjectBundleSchema.parse(raw);
-}
-
-/**
- * Derive slim module section summaries (for dashboard/search compat)
- * from a full validated bundle. This replaces the hand-maintained slim lists.
- */
-export function deriveModuleSectionSummaries(bundle: SubjectBundle) {
-  return bundle.modules.map((mod) => ({
-    topicId: mod.topicId,
-    sections: mod.sections.map((s) => ModuleSectionSummarySchema.parse({
-      title: s.title,
-      section: s.section,
-    })),
-  }));
-}
-
-// ============================================
-// Compat / adapter entry points (primary data now always comes from getFileSystemContentBundle)
-// ============================================
-
-/**
- * Loads known subject bundles using (minimal) TS adapters — kept for compat.
- * Real usage has moved to getFileSystemContentBundle(slug) which is fully generic.
- *
- * For the official architecture (per 2026-06 declaration) use:
- *   - getFileSystemContentBundle(slug)  → returns FileSystemContentBundle from content/
- */
-export async function loadAllContent(): Promise<Record<string, SubjectBundle>> {
-  // For now synchronous under the hood; async for future FS or remote loads.
-  const bundles: Record<string, SubjectBundle> = {
-    "linear-algebra": getLinearAlgebraBundle(),
-    // All other subjects (including auto-discovered) are served via the generic FS path.
-  };
-  return bundles;
-}
-
-/**
- * Convenience: fetch a single validated bundle by slug (SubjectBundle shape for compat).
- * Throws if unknown (in current impl).
- *
- * Primary code must use getFileSystemContentBundle(slug) for subjects that have content/ data.
- */
-export async function getSubjectBundle(slug: string): Promise<SubjectBundle> {
-  const all = await loadAllContent();
-  const bundle = all[slug];
-  if (!bundle) {
-    throw new Error(`Unknown subject slug in content loader: ${slug}`);
-  }
-  return bundle;
-}
-
 // =============================================================================
 // Section structure derivation (replaced the retired src/lib/modules/ tree)
 // =============================================================================
@@ -629,22 +536,5 @@ export async function getDashboardDataForSubject(slug: string): Promise<{
     };
   } catch {
     return { topics: [], problems: [], modules: [] };
-  }
-}
-
-/**
- * Back-compat helper (used by a few LA paths).
- * Implemented as thin wrapper over the FS loader (no more dual flag hacks).
- * Returns a minimal shape or null.
- */
-export async function getOptionalLAContentBundle(): Promise<{ topics: import("./schema").Topic[]; problems: import("./schema").Problem[] } | null> {
-  try {
-    const b = await getFileSystemContentBundle("linear-algebra");
-    if (b?.topics?.length) {
-      return { topics: b.topics, problems: b.problems };
-    }
-    return null;
-  } catch {
-    return null;
   }
 }

@@ -1,58 +1,87 @@
-# Content Architecture Decision (2026-06-01)
+# Content architecture
 
-## Goal
-Move from "content as TypeScript code" to "content as data" so that adding or updating educational material requires almost no code changes.
+Everything a reader sees comes from `content/`. Structured data is JSON,
+validated with Zod at load time; prose is MDX in the house style. There is no
+per-subject code: a new subject is a new folder.
 
-## Final Formats Chosen
-
-| Content Type              | Format     | Reason |
-|---------------------------|------------|--------|
-| Structured data (subjects, topics, questions, metadata) | **JSON** | Strict typing, easy validation with Zod, machine-friendly |
-| Rich explanations (body text, ELI5, examples, common mistakes, etc.) | **MDX** | Excellent authoring experience, supports LaTeX, future custom components, images, etc. |
-
-**YAML was explicitly rejected** in favor of JSON.
-
-## Recommended Folder Structure
+## Layout
 
 ```
 content/
-  {subject-slug}/
-    index.json                 # Subject metadata + topic list
+  STYLE.md                       how to write a chapter
+  questions.md                   how to write practice questions
+  <subject>/
+    index.json                   subject metadata + ordered chapter list
+    legacy-topic-redirects.json  optional: old chapter id → new chapter (+ section)
+    legacy-section-redirects.json optional: old chapter/section → the chapter it moved to
     topics/
-      {topic-id}/
-        index.json             # Topic metadata (title, description, order, estimatedMinutes)
-        questions.json         # Array of all practice questions for this topic
-        module.mdx             # Rich explanation content (sections, ELI5, examples, etc.)
-        problemset.json        # OPTIONAL: the printable chapter test (paper, not graded)
+      <chapter>/
+        index.json               chapter metadata
+        module.mdx               the chapter
+        questions.json           practice questions
+        problemset.json          optional printable chapter test
 ```
 
-### Example
+### `index.json` (subject)
 
+```jsonc
+{
+  "slug": "calculus",             // must equal the folder name
+  "label": "Calculus",
+  "shortDescription": "…",        // one sentence, used on cards and in metadata
+  "modulesDescription": "…",
+  "icon": "∫",
+  "order": 5,                     // position among subjects
+  "category": "calculus",         // groups subjects on the home page
+  "keywords": ["…"],              // optional, page metadata
+  "ogTitle": "…", "ogDescription": "…", "courseDescription": "…",   // optional
+  "topics": [
+    { "id": "limits", "title": "Limits & Continuity", "description": "…",
+      "order": 1, "estimatedMinutes": 120 }
+  ]
+}
 ```
-content/
-  linear-algebra/
-    index.json
-    topics/
-      vectors/
-        index.json
-        questions.json
-        module.mdx
-      matrices/
-        ...
-```
 
-### problemset.json — the printable chapter test
+The loader reads the subject list from this file. Every listed topic must have
+a folder; a folder that is not listed is ignored with a warning.
 
-A chapter has a chapter test **if and only if** this file exists. Nothing else
-switches it on: the route `/{subject}/test/{topic}` (and its `/answers` sibling)
-is auto-discovered from the file, exactly as practice is auto-discovered from
-`questions.json`. There is no per-subject flag — the old `hasTests` on
-`index.json` was the wrong granularity and has been retired.
+### `index.json` (chapter)
 
-The format exists because **paper removes the grading constraint**. The online
-bank is heavily multiple choice because every answer had to survive a string
-comparison. A sheet worked by hand can ask for the things that matter and cannot
-be auto-marked, so every problem carries a `kind`:
+The same `{ id, title, description, order, estimatedMinutes }` object as the
+subject's `topics` entry. It must exist and agree with the subject index.
+
+### `module.mdx`
+
+YAML frontmatter with `title:`, one `#` title (stripped at render), then one
+`##` per section. Each section has a stable slug: `{#slug}` on the heading, or
+a `<!-- section: slug -->` comment within the next four lines, or the slugified
+heading. **Every `section` in `questions.json` and `problemset.json` must equal
+one of these slugs**; the validator refuses anything else, because progress,
+deep links and the dashboard all key on them. A final `## Common Mistakes`
+section is not a practice section.
+
+Statements go in `:::` environments (`definition`, `theorem`, `lemma`,
+`proposition`, `corollary`, `example`, `recipe`, `proof`, `solution`,
+`intuition`, `remark`, `note`, `notation`, `pitfall`, `summary`, `figure`).
+They never nest. The vocabulary lives in `src/lib/content/math-blocks.ts`;
+`STYLE.md` says when to use which. Figures are JSON specs inside
+`:::figure` (see `STYLE.md` §1a and `src/lib/content/figure-spec.ts`).
+
+Mathematics is `$…$` and `$$…$$`; a literal dollar sign is `\$`.
+
+### `questions.json`
+
+An array of questions. `content/questions.md` is the authoring guide. Ids are
+unique across the whole corpus and never change once live.
+
+### `problemset.json` — the printable chapter test
+
+A chapter has a chapter test **if and only if** this file exists; the route
+`/{subject}/test/{chapter}` (and its `/answers` sibling) is auto-discovered.
+
+The format exists because paper removes the grading constraint. A sheet worked
+by hand can ask for the things that matter and cannot be auto-marked, so every
+problem carries a `kind`:
 
 | `kind` | asks the learner to |
 |---|---|
@@ -61,8 +90,8 @@ be auto-marked, so every problem carries a `kind`:
 | `sketch` | draw a graph/region and justify the features drawn |
 | `critique` | find the error in a given argument and repair it |
 
-A sheet of nothing but `computation` wastes the format, and the validator warns
-about it.
+A sheet of nothing but `computation` wastes the format, and the validator
+warns about it.
 
 ```jsonc
 {
@@ -86,72 +115,44 @@ about it.
 }
 ```
 
-`solution` is a worked method, not a final value: the learner is checking their
-route, which is the only thing paper is good for. Blank lines separate
+`solution` is a worked method, not a final value: the learner is checking
+their route, which is the only thing paper is good for. Blank lines separate
 paragraphs; `**bold**` is supported.
 
-Validate with `npm run content:problemsets` (schema, section↔`module.mdx` match,
-corpus-wide unique ids that never collide with a practice question id, and a
-KaTeX render of every fragment).
+### Redirect maps
 
-## Why This Split?
+When chapters are split, merged or moved between subjects, old URLs keep
+working through two optional per-subject files, both hand-maintained:
 
-- **JSON** for everything that needs to be queried, validated, or used for routing/progress.
-- **MDX** for human-authored rich content. This gives us the best of both worlds:
-  - Strong structure where we need it
-  - Pleasant writing experience where it matters most (explanations)
+- `legacy-topic-redirects.json` — `{ "<old-chapter-id>": { "chapterId", "section", "subject"? } }`
+- `legacy-section-redirects.json` — `{ "<old-chapter-id>": { "<section-slug>": "<new-chapter-id>" } }`
 
-## Official Declaration (2026-06)
+## Code
 
-The `content/` + `FileSystemContentBundle` + generic components architecture is now the **primary development direction** for the entire application (see `src/lib/content/NOTES.md` for the formal declaration and git history for the phased roadmap details).
+- `src/lib/content/schema.ts` — Zod schemas for every file above.
+- `src/lib/content/loader.ts` — reads and validates `content/`, auto-discovers
+  subjects, caches per process.
+- `src/lib/content/mdx.ts` — section slug extraction; the single implementation
+  the validator and the pages share.
+- `src/lib/content/problemset-loader.ts` — problem sets.
+- `src/lib/content/figure-spec.ts` — figure spec parsing and expression evaluation.
 
-Legacy per-subject TypeScript content was archived in `backup-content/legacy/` and has been **fully deleted** (2026-06-03) after migration complete (sign-off + two.md + verification waves). All history preserved in git. All new content, features, and pages target the data-driven model.
+## Gates
 
-## Migration Philosophy (Historical Context)
+```
+npm run content:validate     schemas, folder ↔ index parity, environment fences,
+                             question.section ↔ module.mdx slug
+npm run content:latex        every LaTeX fragment renders under KaTeX
+npm run content:answers      every stored answer grades itself correct, respelled the
+                             ways learners type it; distractors grade wrong
+npm run content:problemsets  problem-set schema, corpus-wide unique ids, LaTeX
+npm run content:audit        book-style coverage per subject; fails if a module lost
+                             prose or a section slug moved (--base=<rev>, --verbose)
+npm run content:figures      every figure spec parses and draws
+npm run content:contrast     theme tokens against WCAG AA, light and dark
+npx tsx scripts/audit-explanations.ts   duplicated prose, prose inside $…$,
+                             raw LaTeX outside math — review, not a gate
+```
 
-The initial rollout followed a deliberate sequence that has now been completed:
-1. Thin vertical slice on Linear Algebra to validate the approach.
-2. Schema + loader foundation.
-3. Full ports of all three subjects (LA, Statistics, Calculus) with question parity.
-4. Generic UI + `/x/` dynamic routes proving the complete flows.
-5. Formal declaration as primary path.
-
-Phases (decoupling, promotion of generic paths, retirement of legacy + final backup deletion) are complete (see git history for MIGRATION-PLAN.md / two.md details and src/lib/content/NOTES.md).
-
-## Current Status & Next Steps
-
-- **Done**: Full `content/` structure for all subjects, stable Zod schemas + `src/lib/content/loader.ts`, generic components, working `/x/` experience.
-- **Done**: Full ports + decouple + generic promotion + retirement of legacy + /x/.
-- **Final**: Lightweight auto subject discovery (`loader.getAvailableSubjectConfigs()`) enables true "just drop content/{new-subject}/" with zero subjects.ts / code changes. (See NOTES.md + git history for prior plan docs.)
-
-This document + `content/NOTES.md` (historical) are the sources of truth. Detailed prior plan docs (MIGRATION-PLAN.md, one.md, two.md, etc.) are preserved in git history. New work aligns here. Migration complete.
-
-## Writing Style
-
-`content/STYLE.md` is the house style for explanations: math-book environments
-(`:::definition`, `:::theorem`, `:::proof`, `:::example`, `:::solution`,
-`:::intuition`, ...), when to display an equation, and how to convert an existing
-module. `content/calculus/topics/limits` and `.../derivatives` are the reference
-implementations. The environment vocabulary itself lives in
-`src/lib/content/math-blocks.ts` and is rendered by `src/components/mdx-content.tsx`.
-
-## Authoring Rules & Validation
-- `npm run content:contrast` audits every subject theme in both light and dark
-  against WCAG AA: secondary prose, labels, link accents, and button labels on
-  their accent. Themes project their palette onto the global tokens, so a colour
-  picked for its character can quietly make body text unreadable — run this after
-  touching `src/lib/themes.ts`.
-- `npm run content:audit` reports book-style coverage per subject (definitions,
-  theorems, proofs, examples, intuition asides) and fails if a module lost prose
-  or if any section slug changed against a git revision (`--base=<rev>`,
-  `--verbose` for a per-module listing). Run it after any bulk content edit.
-- `npx tsx scripts/convert-book-style.ts` is the one-off migration that turned
-  `**ELI5**` / `**Worked Example:**` markers into `:::intuition` / `:::example` +
-  `:::solution`. It is idempotent and safe to run on newly authored content.
-- Run `npm run content:validate` (uses tsx) before committing content changes. It enforces Zod schemas, folder<->index parity, environment fences (`:::kind ... :::` — closed, not nested, known kind), **and the critical invariant**: every `question.section` must exactly equal a section slug derived from the topic's `module.mdx` (from `## Title` + optional `{#slug}` or immediate following `<!-- section: slug -->` comment).
-- Sections power per-section mastery, deep links (?section=), dashboard, and progress. Mismatches silently break UX for that topic.
-- Run `npm run content:problemsets` after touching any `problemset.json`. It enforces the same hard section invariant on problem sheets, plus corpus-wide id uniqueness and a KaTeX render of every prompt, part and solution.
-- Use `<!-- section: the-exact-string-from-questions -->` right after the relevant `##` when the natural heading slug would not match the qs you need (or use `{#slug}` in the heading itself).
-- `per-topic/index.json` is optional (subject-level list wins for metadata); folder must still exist if questions/mdx are present.
-- All three core markers (`**ELI5**`, `**Worked Example:**`, `## Common Mistakes` / `## Pitfalls`) are recommended for best authoring consistency and full ELI5/worked/pitfalls UI cards.
-- However, the rich content parser (in adapters.ts + mdx utils) is resilient: it auto-detects example blocks (via h3 containing "example", "Step 1:", etc.), ELI5 variants, and common-mistakes headings (pitfalls/errors) even if the exact bold markers are absent or worded differently. Thus "recommended" markers improve UX polish but missing ones no longer silently degrade the cards. Run validate to see authoring warnings.
+Run all five gates after any content change. `docs/CONTENT-BACKLOG.md` lists
+the measured content problems still open.
