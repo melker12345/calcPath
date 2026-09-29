@@ -64,6 +64,66 @@ export function resolveSectionSlug(
 }
 
 /**
+ * One chapter, cut at its `##` headings, in document order.
+ *
+ * - `intro`    — everything before the first `##` (the chapter opener)
+ * - `section`  — a numbered section; `section` is the STABLE slug that
+ *                questions.json refers to (explicit `{#slug}`, else the
+ *                slugified title, overridden by a `<!-- section: slug -->`
+ *                marker within the next four lines)
+ * - `mistakes` — a "Common Mistakes" heading, which is not a practice section
+ *
+ * THE CRITICAL INVARIANT lives here: `extractMdxSections` is derived from this
+ * split, so the renderer and the validator cannot disagree about a slug.
+ */
+export type MdxPart =
+  | { kind: "intro"; body: string }
+  | { kind: "section"; title: string; section: string; body: string }
+  | { kind: "mistakes"; title: string; body: string };
+
+export function splitMdxParts(mdxSource?: string): MdxPart[] {
+  if (!mdxSource) return [];
+  const src = stripFrontmatterAndH1(mdxSource);
+  const lines = src.split(/\r?\n/);
+  const parts: MdxPart[] = [];
+  let current: MdxPart = { kind: "intro", body: "" };
+  let buffer: string[] = [];
+
+  const flush = () => {
+    current.body = buffer.join("\n").trim();
+    if (current.kind !== "intro" || current.body) parts.push(current);
+    buffer = [];
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    const h2 = line.match(/^##\s+(.+?)(?:\s*\{#([a-z0-9-]+)\})?$/i);
+    if (!h2) {
+      buffer.push(lines[i]);
+      continue;
+    }
+    flush();
+    const rawTitle = h2[1].trim();
+    if (rawTitle.toLowerCase().includes("common mistake")) {
+      current = { kind: "mistakes", title: rawTitle, body: "" };
+      continue;
+    }
+    let sec = h2[2] || toSlug(rawTitle);
+    // A marker comment within the next few lines names the stable slug.
+    for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+      const cm = lines[j].match(/<!--\s*section:\s*([a-z0-9-]+)\s*-->/i);
+      if (cm) {
+        sec = cm[1];
+        break;
+      }
+    }
+    current = { kind: "section", title: rawTitle, section: sec, body: "" };
+  }
+  flush();
+  return parts;
+}
+
+/**
  * Extract the list of sections from a topic's module.mdx.
  * Returns array of { title, section } in document order.
  * - Skips the "Common Mistakes" section(s)
@@ -73,33 +133,9 @@ export function resolveSectionSlug(
  * should be derived from (or match) this.
  */
 export function extractMdxSections(mdxSource?: string): Array<{ title: string; section: string }> {
-  if (!mdxSource) return [];
-  const src = stripFrontmatterAndH1(mdxSource);
-  const lines = src.split(/\r?\n/);
-  const secs: Array<{ title: string; section: string }> = [];
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    const h2 = line.match(/^##\s+(.+?)(?:\s*\{#([a-z0-9-]+)\})?$/i);
-    if (h2) {
-      const rawTitle = h2[1].trim();
-      if (rawTitle.toLowerCase().includes("common mistake")) {
-        continue;
-      }
-      const provided = h2[2];
-      let sec = provided || toSlug(rawTitle);
-      // Lookahead for explicit marker (reuse logic)
-      for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
-        const cm = lines[j].match(/<!--\s*section:\s*([a-z0-9-]+)\s*-->/i);
-        if (cm) {
-          sec = cm[1];
-          break;
-        }
-      }
-      secs.push({ title: rawTitle, section: sec });
-    }
-  }
-  return secs;
+  return splitMdxParts(mdxSource)
+    .filter((part): part is Extract<MdxPart, { kind: "section" }> => part.kind === "section")
+    .map(({ title, section }) => ({ title, section }));
 }
 
 /** Convenience: just the slugs (used heavily by validation). */
