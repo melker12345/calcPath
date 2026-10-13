@@ -2,18 +2,35 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth-provider";
-import { reportHeading, reportToMarkdown, reportsToMarkdown } from "@/lib/report-markdown";
+import { reportToMarkdown, reportsToMarkdown, when } from "@/lib/report-markdown";
 import type { ReportKind, ReportRow, ReportStatus } from "@/lib/reports";
 
 /**
- * The reports inbox. Every report is shown as the exact markdown brief an LLM
- * would be handed, so what you copy is what you see.
+ * The reports inbox. Each report reads as where / what / who; the exact
+ * markdown brief an LLM would be handed sits behind "Show brief" and is what
+ * the copy buttons copy.
  */
 
 const STATUS_TABS: ReportStatus[] = ["open", "fixed", "dismissed"];
 const KIND_TABS: Array<ReportKind | "all"> = ["all", "question", "chapter", "site"];
 
 type Load = { state: "loading" } | { state: "error"; message: string } | { state: "ready"; rows: ReportRow[] };
+
+/** "Calculus › Limits & Continuity › Mistakes" — titles from the snapshot, ids as fallback. */
+function reportWhere(r: ReportRow): string {
+  if (r.kind === "site") {
+    if (!r.page_url) return "Site";
+    try {
+      return `Site · ${new URL(r.page_url).pathname}`;
+    } catch {
+      return "Site";
+    }
+  }
+  const snap = r.snapshot;
+  const parts = [snap?.subjectLabel ?? r.subject, snap?.topicTitle ?? r.topic_id, snap?.sectionTitle ?? r.section];
+  if (r.kind === "question") parts.push(r.question_id);
+  return parts.filter(Boolean).join(" › ") || r.kind;
+}
 
 async function copyText(text: string): Promise<boolean> {
   try {
@@ -218,49 +235,78 @@ export function AdminFeedbackPanel() {
       )}
       {load.state === "ready" && visible.length === 0 && <p className="mt-6 theme-text-muted">No reports match.</p>}
 
-      <ul className="mt-6 space-y-6">
+      <ul className="mt-6 border-b theme-border">
         {visible.map((r) => (
-          <li key={r.id} className="border theme-border">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b theme-border bg-[var(--surface-2)] px-3 py-2">
-              <span className="font-medium theme-text">
-                {reportHeading(r)}
-                {r.email && (
-                  <>
-                    <span className="mx-2 theme-text-muted">·</span>
-                    <a href={`mailto:${r.email}`} className="font-normal underline underline-offset-2">
-                      {r.email}
-                    </a>
-                  </>
+          <li key={r.id} className="border-t theme-border py-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <p className="theme-text">
+                <span className="mr-2 text-xs uppercase tracking-wide theme-text-muted">{r.kind}</span>
+                {r.page_url ? (
+                  <a href={r.page_url} className="font-medium hover:underline underline-offset-2">
+                    {reportWhere(r)}
+                  </a>
+                ) : (
+                  <span className="font-medium">{reportWhere(r)}</span>
                 )}
-              </span>
-              <span className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={async () => flash((await copyText(reportToMarkdown(r))) ? "Copied." : "Copy failed.")}
-                  className="border theme-border px-2 py-0.5 theme-text"
-                >
-                  Copy
-                </button>
-                {r.status !== "fixed" && (
-                  <button type="button" onClick={() => setRowStatus([r.id], "fixed")} className="border theme-border px-2 py-0.5 theme-text">
-                    Mark fixed
-                  </button>
-                )}
-                {r.status !== "dismissed" && (
-                  <button type="button" onClick={() => setRowStatus([r.id], "dismissed")} className="border theme-border px-2 py-0.5 theme-text">
-                    Dismiss
-                  </button>
-                )}
-                {r.status !== "open" && (
-                  <button type="button" onClick={() => setRowStatus([r.id], "open")} className="border theme-border px-2 py-0.5 theme-text">
-                    Reopen
-                  </button>
-                )}
-              </span>
+              </p>
+              <time dateTime={r.created_at} className="text-xs theme-text-muted">
+                {when(r.created_at)}
+              </time>
             </div>
-            <pre className="max-h-[32rem] overflow-auto whitespace-pre-wrap break-words px-3 py-3 font-mono text-xs leading-relaxed theme-text-secondary">
-              {reportToMarkdown(r)}
-            </pre>
+
+            <p className="mt-1 theme-text-secondary">
+              {r.reason}
+              {r.email && (
+                <>
+                  <span className="mx-2 theme-text-muted">·</span>
+                  <a href={`mailto:${r.email}`} className="underline underline-offset-2">
+                    {r.email}
+                  </a>
+                </>
+              )}
+            </p>
+
+            {r.message ? (
+              <p className="mt-3 max-w-prose whitespace-pre-wrap break-words border-l-2 theme-border pl-3 text-[15px] leading-relaxed theme-text">
+                {r.message}
+              </p>
+            ) : (
+              <p className="mt-3 theme-text-muted">No message.</p>
+            )}
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={async () => flash((await copyText(reportToMarkdown(r))) ? "Copied." : "Copy failed.")}
+                className="border theme-border px-2 py-0.5 theme-text"
+              >
+                Copy brief
+              </button>
+              {r.status !== "fixed" && (
+                <button type="button" onClick={() => setRowStatus([r.id], "fixed")} className="border theme-border px-2 py-0.5 theme-text">
+                  Mark fixed
+                </button>
+              )}
+              {r.status !== "dismissed" && (
+                <button type="button" onClick={() => setRowStatus([r.id], "dismissed")} className="border theme-border px-2 py-0.5 theme-text">
+                  Dismiss
+                </button>
+              )}
+              {r.status !== "open" && (
+                <button type="button" onClick={() => setRowStatus([r.id], "open")} className="border theme-border px-2 py-0.5 theme-text">
+                  Reopen
+                </button>
+              )}
+            </div>
+
+            <details className="mt-3">
+              <summary className="cursor-pointer text-xs theme-text-muted hover:underline underline-offset-2">
+                Show brief
+              </summary>
+              <pre className="mt-2 max-h-[32rem] overflow-auto whitespace-pre-wrap break-words border theme-border bg-[var(--surface-2)] px-3 py-3 font-mono text-xs leading-relaxed theme-text-secondary">
+                {reportToMarkdown(r)}
+              </pre>
+            </details>
           </li>
         ))}
       </ul>

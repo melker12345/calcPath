@@ -16,8 +16,10 @@ function fence(body: string, lang = ""): string {
   return `${f}${lang}\n${body}\n${f}`;
 }
 
-function when(iso: string): string {
-  return iso.replace("T", " ").replace(/\.\d+Z$/, "Z");
+/** "2026-10-13 09:19 UTC" from either ISO or Postgres timestamptz text. */
+export function when(stamp: string): string {
+  const m = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/.exec(stamp);
+  return m ? `${m[1]} ${m[2]} UTC` : stamp;
 }
 
 export function reportHeading(r: ReportRow): string {
