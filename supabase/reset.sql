@@ -32,6 +32,7 @@ create table public.reports (
   reason      text         not null,
   message     text,
   page_url    text,
+  email       text,
   snapshot    jsonb,
   learner     jsonb,
   resolved_at timestamptz

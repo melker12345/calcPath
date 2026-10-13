@@ -3,6 +3,9 @@ import { createClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildChapterSnapshot, buildQuestionSnapshot } from "@/lib/server/report-snapshot";
 import {
+  EMAIL_MAX,
+  EMAIL_RE,
+  EMAIL_REQUIRED,
   MESSAGE_MAX,
   REASONS_BY_KIND,
   type LearnerContext,
@@ -116,6 +119,14 @@ export async function POST(request: Request) {
     return bad("Please describe the problem in a few words");
   }
 
+  const rawEmail = body.email;
+  if (rawEmail !== undefined && rawEmail !== null && typeof rawEmail !== "string") {
+    return bad("email must be a string");
+  }
+  const email = typeof rawEmail === "string" ? rawEmail.trim().toLowerCase() : "";
+  if (email && (email.length > EMAIL_MAX || !EMAIL_RE.test(email))) return bad("Please enter a valid email address");
+  if (!email && EMAIL_REQUIRED[kind]) return bad("Please enter your email address");
+
   const pageUrl =
     typeof body.pageUrl === "string" && body.pageUrl.length > 0 ? body.pageUrl.slice(0, PAGE_URL_MAX) : null;
 
@@ -157,6 +168,7 @@ export async function POST(request: Request) {
     reason,
     message: message || null,
     page_url: pageUrl,
+    email: email || null,
     snapshot,
     learner: kind === "question" ? learner : null,
   };

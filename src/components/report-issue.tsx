@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
-import { CHAPTER_REASONS, MESSAGE_MAX, QUESTION_REASONS, type ReportInput } from "@/lib/reports";
+import { CHAPTER_REASONS, EMAIL_MAX, EMAIL_RE, MESSAGE_MAX, QUESTION_REASONS, type ReportInput } from "@/lib/reports";
 
 /**
  * Report a problem with a chapter section or a practice question.
@@ -33,11 +33,13 @@ export function ReportIssue({
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState<string>(reasons[0]);
   const [message, setMessage] = useState("");
+  const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
 
   const needsMessage = reason === "Other";
-  const canSubmit = status !== "sending" && (!needsMessage || message.trim().length >= 3);
+  const emailOk = email.trim() === "" || EMAIL_RE.test(email.trim());
+  const canSubmit = status !== "sending" && emailOk && (!needsMessage || message.trim().length >= 3);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +54,7 @@ export function ReportIssue({
       questionId: target.kind === "question" ? target.questionId : undefined,
       reason,
       message: message.trim() || undefined,
+      email: email.trim() || undefined,
       pageUrl: typeof window !== "undefined" ? window.location.href : undefined,
       learner: target.kind === "question" ? context : undefined,
     };
@@ -137,6 +140,19 @@ export function ReportIssue({
       <p className="mt-1 text-right text-xs theme-text-muted">
         {message.length}/{max}
       </p>
+
+      <label htmlFor={`${uid}-email`} className="mt-1 block font-medium theme-text">
+        Email (optional, if you want a reply)
+      </label>
+      <input
+        id={`${uid}-email`}
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        maxLength={EMAIL_MAX}
+        autoComplete="email"
+        className="mt-1 w-full border theme-border bg-[var(--bg)] px-3 py-2 theme-text outline-none focus:border-[var(--accent)]"
+      />
 
       {error && (
         <p role="alert" className="mt-2 text-red-600 dark:text-red-400">

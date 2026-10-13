@@ -222,7 +222,17 @@ export function AdminFeedbackPanel() {
         {visible.map((r) => (
           <li key={r.id} className="border theme-border">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b theme-border bg-[var(--surface-2)] px-3 py-2">
-              <span className="font-medium theme-text">{reportHeading(r)}</span>
+              <span className="font-medium theme-text">
+                {reportHeading(r)}
+                {r.email && (
+                  <>
+                    <span className="mx-2 theme-text-muted">·</span>
+                    <a href={`mailto:${r.email}`} className="font-normal underline underline-offset-2">
+                      {r.email}
+                    </a>
+                  </>
+                )}
+              </span>
               <span className="flex gap-2">
                 <button
                   type="button"

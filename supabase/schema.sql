@@ -29,6 +29,7 @@ create table if not exists public.reports (
   reason      text         not null,
   message     text,
   page_url    text,
+  email       text,        -- reporter's contact address (required for kind = 'site')
   -- Captured by the server at report time so the report stays actionable
   -- after the content changes: the stored question, or the section source.
   snapshot    jsonb,
@@ -37,6 +38,9 @@ create table if not exists public.reports (
   learner     jsonb,
   resolved_at timestamptz
 );
+
+-- Added after the table first shipped; a no-op on a fresh table.
+alter table public.reports add column if not exists email text;
 
 -- Inbox lists newest first, usually filtered to open reports.
 create index if not exists reports_created_at_idx on public.reports (created_at desc);

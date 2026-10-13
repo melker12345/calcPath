@@ -39,6 +39,15 @@ export const REASONS_BY_KIND: Record<ReportKind, readonly string[]> = {
   site: SITE_REASONS,
 };
 
+/** Contact email: required on /feedback (spam filter), optional on content reports. */
+export const EMAIL_MAX = 254;
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const EMAIL_REQUIRED: Record<ReportKind, boolean> = {
+  question: false,
+  chapter: false,
+  site: true,
+};
+
 /** Message length caps, enforced in the form and again on the server. */
 export const MESSAGE_MAX: Record<ReportKind, number> = {
   question: 2000,
@@ -101,6 +110,7 @@ export type ReportRow = {
   reason: string;
   message: string | null;
   page_url: string | null;
+  email: string | null;
   snapshot: ReportSnapshot | null;
   learner: LearnerContext | null;
   resolved_at: string | null;
@@ -116,5 +126,6 @@ export type ReportInput = {
   reason: string;
   message?: string;
   pageUrl?: string;
+  email?: string;
   learner?: LearnerContext;
 };
