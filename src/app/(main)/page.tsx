@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { subjectThemeClass } from "@/lib/themes";
+import { SubjectGlyph } from "@/components/subject-glyph";
 import {
   JsonLd,
   buildLandingJsonLd,
@@ -165,12 +165,7 @@ export default async function Home() {
               <ul className="mt-2 space-y-1">
                 {list.map((subject) => (
                   <li key={subject.slug} className="flex items-baseline gap-2">
-                    <span
-                      aria-hidden
-                      className={`w-5 shrink-0 text-center font-serif text-[var(--subject-accent,var(--text-muted))] ${subjectThemeClass(subject.slug)}`}
-                    >
-                      {subject.icon || "•"}
-                    </span>
+                    <SubjectGlyph slug={subject.slug} icon={subject.icon} />
                     <Link prefetch={false}
                       href={`/${subject.slug}`}
                       className="text-[15px] text-[var(--accent)] underline-offset-4 hover:underline"

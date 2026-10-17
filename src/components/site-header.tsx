@@ -7,7 +7,7 @@ import { SearchTrigger } from "@/components/search-command";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useClientMounted } from "@/hooks/use-client-mounted";
 import type { NavSubject } from "@/lib/shared-types";
-import { subjectThemeClass } from "@/lib/themes";
+import { SubjectGlyph } from "@/components/subject-glyph";
 
 const utilityLinks = [
   { href: "/dashboard", label: "Progress" },
@@ -87,12 +87,7 @@ function SubjectsDropdown({
                 className="flex items-center gap-2 px-3 py-2 text-sm theme-text hover:underline"
                 role="menuitem"
               >
-                <span
-                  aria-hidden
-                  className={`w-5 shrink-0 text-center font-serif text-[var(--subject-accent,var(--text-muted))] ${subjectThemeClass(subject.slug)}`}
-                >
-                  {subject.icon || "•"}
-                </span>
+                <SubjectGlyph slug={subject.slug} icon={subject.icon} />
                 <span className="truncate">{subject.label}</span>
               </Link>
             ))}
@@ -173,12 +168,7 @@ function MobileDrawer({
               className="flex items-center gap-3 border theme-border px-4 py-3 text-base font-medium theme-text"
               onClick={onClose}
             >
-              <span
-                aria-hidden
-                className={`w-6 shrink-0 text-center font-serif text-[var(--subject-accent,var(--text-muted))] ${subjectThemeClass(subject.slug)}`}
-              >
-                {subject.icon || "•"}
-              </span>
+              <SubjectGlyph slug={subject.slug} icon={subject.icon} />
               {subject.label}
             </Link>
           ))}

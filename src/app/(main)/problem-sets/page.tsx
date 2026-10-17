@@ -52,7 +52,7 @@ export default async function ProblemSetsPage() {
                   {group.subjectLabel}
                 </Link>
               </h2>
-              <ul className="mt-2 divide-y theme-border">
+              <ul className="mt-2 divide-y divide-[var(--border)] theme-border">
                 {group.sets.map((set) => (
                   <li
                     key={set.topicId}

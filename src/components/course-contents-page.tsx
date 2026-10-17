@@ -95,7 +95,7 @@ export function CourseContentsPage({
 
       <section className="py-8">
         <h2 className="text-sm font-semibold uppercase tracking-widest theme-text-muted">Contents</h2>
-        <ol className="mt-4 divide-y theme-border border-y">
+        <ol className="mt-4 divide-y divide-[var(--border)] theme-border border-y">
           {topics.map((topic, index) => {
             const isOpen = openTopicId === topic.id;
             const sections = modulesByTopic[topic.id]?.sections ?? [];
