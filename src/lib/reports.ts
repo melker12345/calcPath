@@ -89,6 +89,20 @@ export type ChapterSnapshot = {
 
 export type ReportSnapshot = QuestionSnapshot | ChapterSnapshot;
 
+/**
+ * Everything a report against one chapter can snapshot, built from content/ at
+ * deploy time and published at /report-data/<subject>/<topicId>.json.
+ */
+export type ReportData = {
+  subjectLabel: string;
+  topicTitle: string;
+  /** Repo-relative path of the chapter file. */
+  file: string;
+  /** `## …` sections by slug; source capped like ChapterSnapshot.sectionSource. */
+  sections: Record<string, { title: string; source: string; truncated: boolean }>;
+  questions: Record<string, QuestionSnapshot>;
+};
+
 /** What the learner did on a practice question before reporting it. */
 export type LearnerContext = {
   submissions?: Array<{ input: string; gradedCorrect: boolean; at: string }>;

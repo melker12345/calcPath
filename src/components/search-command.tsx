@@ -13,15 +13,13 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useClientMounted } from "@/hooks/use-client-mounted";
 
-// Type is now also exported from the server action for the new content path.
-import type { SearchEntry } from "@/lib/actions/get-search-index";
+import type { SearchEntry } from "@/lib/search-index";
 
 async function loadIndex(): Promise<SearchEntry[]> {
-  // Use the new data-driven architecture exclusively (FileSystemContentBundle + deriveModuleStructureFromBundle via Server Action).
-  // Search results (topics + per-section deep links) now come 100% from real content/ data.
-  // No more legacy fallback — the old modules/ tree and static shims like subject-topics are fully retired for this path.
-  const { getSearchIndex } = await import("@/lib/actions/get-search-index");
-  return await getSearchIndex();
+  // Built from content/ at deploy time (src/app/search-index.json/route.ts).
+  const res = await fetch("/search-index.json");
+  if (!res.ok) throw new Error(`search index: ${res.status}`);
+  return (await res.json()) as SearchEntry[];
 }
 
 function matchScore(entry: SearchEntry, query: string): number {
@@ -58,7 +56,11 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   const ensureIndexLoaded = useCallback(() => {
     if (indexLoaded.current) return;
     indexLoaded.current = true;
-    loadIndex().then(setIndex);
+    loadIndex()
+      .then(setIndex)
+      .catch(() => {
+        indexLoaded.current = false;
+      });
   }, []);
 
   const results = useMemo(() => {

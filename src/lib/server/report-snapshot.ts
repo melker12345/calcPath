@@ -2,11 +2,13 @@ import "server-only";
 
 import { getFileSystemContentBundle } from "@/lib/content/loader";
 import { stripFrontmatterAndH1, toSlug } from "@/lib/content/mdx";
-import type { ChapterSnapshot, QuestionSnapshot } from "@/lib/reports";
+import type { QuestionSnapshot, ReportData } from "@/lib/reports";
 
 /**
- * Builds the content snapshot stored with a report, read from content/ on the
- * server at report time. Nothing here trusts client-supplied text.
+ * Builds the report data for one chapter from content/ at build time: every
+ * snapshot a report against it can store. It is published as a static file the
+ * feedback worker reads (worker/index.ts), so nothing a report stores comes
+ * from client-supplied text, and nothing reads content/ at request time.
  */
 
 const SECTION_SOURCE_MAX = 4000;
@@ -45,69 +47,49 @@ function splitSections(mdxSource: string): SectionBlock[] {
   return blocks;
 }
 
-export async function buildQuestionSnapshot(
-  subject: string,
-  topicId: string,
-  questionId: string,
-): Promise<QuestionSnapshot | null> {
-  let bundle;
-  try {
-    bundle = await getFileSystemContentBundle(subject);
-  } catch {
-    return null;
-  }
-  const topic = bundle.topics.find((t) => t.id === topicId);
-  const q = bundle.problems.find((p) => p.id === questionId && p.topicId === topicId);
-  if (!topic || !q) return null;
-
-  const mdx = bundle.mdxModules.find((m) => m.topicId === topicId);
-  const section = mdx ? splitSections(mdx.mdxSource).find((b) => b.slug === q.section) : undefined;
-
-  return {
-    kind: "question",
-    subjectLabel: bundle.config.label,
-    topicTitle: topic.title,
-    sectionSlug: q.section,
-    sectionTitle: section?.title ?? null,
-    file: `content/${subject}/topics/${topicId}/questions.json`,
-    question: {
-      id: q.id,
-      type: q.type,
-      difficulty: q.difficulty,
-      prompt: q.prompt,
-      ...(q.choices ? { choices: q.choices } : {}),
-      answer: q.answer,
-      explanation: q.explanation,
-    },
-  };
-}
-
-export async function buildChapterSnapshot(
-  subject: string,
-  topicId: string,
-  section: string | null,
-): Promise<ChapterSnapshot | null> {
-  let bundle;
-  try {
-    bundle = await getFileSystemContentBundle(subject);
-  } catch {
-    return null;
-  }
+export async function buildReportData(subject: string, topicId: string): Promise<ReportData | null> {
+  const bundle = await getFileSystemContentBundle(subject);
   const topic = bundle.topics.find((t) => t.id === topicId);
   if (!topic) return null;
 
   const mdx = bundle.mdxModules.find((m) => m.topicId === topicId);
-  const block = section && mdx ? splitSections(mdx.mdxSource).find((b) => b.slug === section) : undefined;
-  const truncated = (block?.source.length ?? 0) > SECTION_SOURCE_MAX;
+  const blocks = mdx ? splitSections(mdx.mdxSource) : [];
+  const sections: ReportData["sections"] = {};
+  for (const b of blocks) {
+    sections[b.slug] ??= {
+      title: b.title,
+      source: b.source.slice(0, SECTION_SOURCE_MAX),
+      truncated: b.source.length > SECTION_SOURCE_MAX,
+    };
+  }
+
+  const questions: Record<string, QuestionSnapshot> = {};
+  for (const q of bundle.problems) {
+    if (q.topicId !== topicId) continue;
+    questions[q.id] = {
+      kind: "question",
+      subjectLabel: bundle.config.label,
+      topicTitle: topic.title,
+      sectionSlug: q.section,
+      sectionTitle: sections[q.section]?.title ?? null,
+      file: `content/${subject}/topics/${topicId}/questions.json`,
+      question: {
+        id: q.id,
+        type: q.type,
+        difficulty: q.difficulty,
+        prompt: q.prompt,
+        ...(q.choices ? { choices: q.choices } : {}),
+        answer: q.answer,
+        explanation: q.explanation,
+      },
+    };
+  }
 
   return {
-    kind: "chapter",
     subjectLabel: bundle.config.label,
     topicTitle: topic.title,
-    sectionSlug: section,
-    sectionTitle: block?.title ?? null,
     file: `content/${subject}/topics/${topicId}/module.mdx`,
-    sectionSource: block ? block.source.slice(0, SECTION_SOURCE_MAX) : null,
-    sectionSourceTruncated: truncated,
+    sections,
+    questions,
   };
 }

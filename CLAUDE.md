@@ -20,8 +20,14 @@ high quality information**. Everything else is secondary.
   in the Supabase `reports` table (`supabase/schema.sql`); `/admin/feedback`
   shows each as a markdown brief.
 - **Old URLs** — `content/<subject>/legacy-topic-redirects.json` and
-  `legacy-section-redirects.json` become permanent redirects in
-  `next.config.ts` at build time. Add to them when a chapter moves.
+  `legacy-section-redirects.json` become permanent redirects at build time
+  (`scripts/cloudflare-assets.ts` → `out/_redirects`). Add to them when a
+  chapter moves.
+- **Hosting** — Cloudflare Workers, free plan. `npm run build` is a static
+  export to `out/`, served as static assets; the only code that runs per
+  request is `worker/` (`/api/feedback`, and redirects that depend on
+  `?section=`). Nothing may need a server at request time: a new route is
+  static, or it belongs in the worker.
 
 There is no analytics, no donations, no cloud sync, no gamification. Do not
 add them back.
@@ -49,7 +55,9 @@ add them back.
 
 ```
 npm run dev                  # never assume port 3000 is free
-npm run build                # must pass with NO environment variables set
+npm run build                # static export to out/; must pass with NO environment variables set
+npm run preview              # serve out/ + the worker locally (wrangler dev), after a build
+npm run deploy               # build + wrangler deploy (Cloudflare)
 npm run lint && npx tsc --noEmit
 npm test                     # vitest; tests/stubs/server-only.ts lets it import server modules
 npm run content:validate     # schemas + question.section ↔ module.mdx

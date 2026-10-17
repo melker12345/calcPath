@@ -7,7 +7,7 @@
  *   - only the woff2 sources are kept (every supported browser reads woff2),
  *     which drops the woff/ttf fallbacks from the CSS and the copy;
  *   - the file names carry no hash, so the pages can preload the two fonts
- *     nearly every formula needs and next.config can mark them immutable.
+ *     nearly every formula needs and out/_headers (scripts/cloudflare-assets.ts) can mark them immutable.
  *
  * Run after upgrading katex: npx tsx scripts/sync-katex.ts
  */

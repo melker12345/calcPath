@@ -1,4 +1,10 @@
-'use server';
+import "server-only";
+
+import {
+  deriveModuleStructureFromBundle,
+  getAvailableSubjectConfigs,
+  getFileSystemContentBundle,
+} from "@/lib/content/loader";
 
 export type SearchEntry = {
   label: string;
@@ -8,9 +14,9 @@ export type SearchEntry = {
   kind: "topic" | "section" | "page";
 };
 
-// Server Action: builds the full search index using ONLY the new data-driven content architecture.
-// This removes the last major client-side dependency on legacy modules/ tree and static shims (subject-topics fully retired).
-// Sections come from the real MDX-derived structure (stable slugs preferred).
+// Builds the search index from content/ at build time; published as
+// /search-index.json (src/app/search-index.json/route.ts) and fetched by the
+// search dialog on first open. Sections come from the MDX-derived structure.
 
 function slugify(title: string): string {
   return title
@@ -19,8 +25,7 @@ function slugify(title: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
-export async function getSearchIndex(): Promise<SearchEntry[]> {
-  const { getFileSystemContentBundle, deriveModuleStructureFromBundle, getAvailableSubjectConfigs } = await import("@/lib/content/loader");
+export async function buildSearchIndex(): Promise<SearchEntry[]> {
   const entries: SearchEntry[] = [];
   // Use auto discovery (content/ dir scan for index.json) so new subjects appear in search with zero subjects.ts entry.
   // Graceful metadata fallback from subjects.ts record if present.

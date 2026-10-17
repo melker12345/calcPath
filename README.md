@@ -27,6 +27,7 @@ src/lib/answer-check.ts      grading (client side, in the practice page)
 src/lib/progress*.ts         progress v2: localStorage store + model; use-progress.ts hook
 src/lib/reports.ts, report-markdown.ts, server/report-snapshot.ts
                              reports: types, the LLM-ready brief, the content snapshot
+worker/                      the Cloudflare worker: /api/feedback, ?section= redirects
 scripts/                     content gates and audits
 tests/stubs/server-only.ts   lets vitest import server-only modules
 docs/CONTENT-BACKLOG.md      known content problems, measured
@@ -34,8 +35,8 @@ docs/CONTENT-BACKLOG.md      known content problems, measured
 
 Dropping a new `content/<subject>/` folder adds the subject everywhere: routes,
 navigation, sitemap, search, dashboard. Old chapter ids keep working through
-the two optional redirect files, turned into permanent redirects by
-`next.config.ts` at build time.
+the two optional redirect files, turned into permanent redirects at build
+time by `scripts/cloudflare-assets.ts`.
 
 ## How pages are made
 
@@ -51,15 +52,18 @@ the two optional redirect files, turned into permanent redirects by
   browser (`calc_progress_v2` in localStorage) with JSON export and import on
   `/dashboard`.
 - **Reports** — "Report a problem" on every chapter and question posts to
-  `/api/feedback`; the server snapshots the item from `content/` and stores it
-  in the Supabase `reports` table. `/admin/feedback` renders each report as a
+  `/api/feedback` (the worker, `worker/feedback.ts`). It snapshots the item
+  from `/report-data/<subject>/<chapter>.json`, built from `content/` at deploy
+  time and not public, and stores it in the Supabase `reports` table. `/admin/feedback` renders each report as a
   markdown brief an LLM can act on.
 
 ## Commands
 
 ```
 npm run dev                  # never assume port 3000 is free
-npm run build                # passes with no environment variables set
+npm run build                # static export to out/; passes with no environment variables set
+npm run preview              # serve out/ + the worker locally (wrangler dev)
+npm run deploy               # build + deploy to Cloudflare
 npm run lint && npx tsc --noEmit
 npm test                     # unit tests (grading, section slugs, parsers)
 
@@ -76,6 +80,19 @@ npx tsx scripts/audit-explanations.ts   # duplicated prose, prose inside $…$
 
 The five `content:*` gates plus lint, typecheck, tests and build are green
 before a commit on `dev`.
+
+## Hosting
+
+Cloudflare Workers (`wrangler.jsonc`). The site is a static export: every
+page is a file in `out/`, served by Cloudflare without running any code.
+`out/_redirects` and `out/_headers` are written after `next build` by
+`scripts/cloudflare-assets.ts`. Only `/api/*`, `/report-data/*` and paths
+with no file reach the worker (`worker/index.ts`).
+
+The `NEXT_PUBLIC_*` variables are read by `next build` (from `.env` locally)
+and baked into the admin page; the worker reads the same names as Cloudflare
+variables and secrets (`npx wrangler secret put …`), and from `.env` under
+`npm run preview`.
 
 ## Services
 

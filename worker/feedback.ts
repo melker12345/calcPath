@@ -1,7 +1,4 @@
-import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { buildChapterSnapshot, buildQuestionSnapshot } from "@/lib/server/report-snapshot";
 import {
   EMAIL_MAX,
   EMAIL_RE,
@@ -9,22 +6,44 @@ import {
   MESSAGE_MAX,
   REASONS_BY_KIND,
   type LearnerContext,
+  type ReportData,
   type ReportKind,
   type ReportSnapshot,
   type ReportStatus,
 } from "@/lib/reports";
+import type { Env } from "./index";
 
 /**
  * /api/feedback — the `reports` table.
  *
- *   POST  (public)  file a report; the server snapshots the content it points at
+ *   POST  (public)  file a report; the snapshot of the content it points at
+ *                   comes from /report-data/, built from content/ at deploy time
  *   GET   (admin)   list reports:  ?status=open|fixed|dismissed&kind=&subject=&limit=
  *   PATCH (admin)   set status:    { ids: string[], status }
  *
  * Admin = a Supabase session whose email is in ADMIN_EMAIL (comma separated).
- * Without Supabase env vars every method answers 503 rather than throwing, so
- * the build and the rest of the site never depend on them.
+ * Without the Supabase vars every method answers 503 rather than throwing.
  */
+
+export async function handleFeedback(request: Request, env: Env): Promise<Response> {
+  switch (request.method) {
+    case "POST":
+      return post(request, env);
+    case "GET":
+      return get(request, env);
+    case "PATCH":
+      return patch(request, env);
+    default:
+      return Response.json({ error: "Method not allowed" }, { status: 405, headers: { Allow: "GET, POST, PATCH" } });
+  }
+}
+
+/** The chapter's ReportData from the static assets; null for an unknown chapter. */
+async function reportData(request: Request, env: Env, subject: string, topicId: string): Promise<ReportData | null> {
+  const res = await env.ASSETS.fetch(new URL(`/report-data/${subject}/${topicId}.json`, request.url));
+  if (!res.ok) return null;
+  return (await res.json()) as ReportData;
+}
 
 const KINDS: ReportKind[] = ["question", "chapter", "site"];
 const STATUSES: ReportStatus[] = ["open", "fixed", "dismissed"];
@@ -32,7 +51,7 @@ const SLUG_RE = /^[a-z0-9-]{1,100}$/;
 const LEARNER_MAX_CHARS = 8000;
 const PAGE_URL_MAX = 500;
 
-// In-process limiter (per serverless instance by design; good enough for spam).
+// In-isolate limiter (per worker instance by design; good enough for spam).
 const rateLimit = new Map<string, number>();
 const RATE_WINDOW_MS = 60_000;
 const MAX_PER_WINDOW = 20;
@@ -52,29 +71,34 @@ function isRateLimited(ip: string): boolean {
 
 function clientIp(request: Request): string {
   return (
+    request.headers.get("cf-connecting-ip") ??
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     request.headers.get("x-real-ip") ??
     "unknown"
   );
 }
 
-function hasAdminEnv(): boolean {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+function hasAdminEnv(env: Env): boolean {
+  return Boolean(env.NEXT_PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+function adminClient(env: Env) {
+  return createClient(env.NEXT_PUBLIC_SUPABASE_URL!, env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } });
 }
 
 const unavailable = () =>
-  NextResponse.json({ error: "Reports are not configured on this deployment." }, { status: 503 });
+  Response.json({ error: "Reports are not configured on this deployment." }, { status: 503 });
 
-const bad = (error: string) => NextResponse.json({ error }, { status: 400 });
+const bad = (error: string) => Response.json({ error }, { status: 400 });
 
 /**
  * A missing `reports` table is a setup problem, not a bug in the request, so
  * the client is told exactly what to do instead of a generic failure.
  */
-function tableMissing(error: { message?: string; code?: string }): NextResponse | null {
+function tableMissing(error: { message?: string; code?: string }): Response | null {
   const msg = error.message ?? "";
   if (error.code === "42P01" || error.code === "PGRST205" || /schema cache|does not exist/i.test(msg)) {
-    return NextResponse.json(
+    return Response.json(
       { error: "The reports table does not exist yet. Run supabase/schema.sql in the Supabase SQL editor." },
       { status: 503 },
     );
@@ -88,10 +112,10 @@ function optionalSlug(v: unknown, name: string): { value: string | null } | { er
   return { value: v };
 }
 
-export async function POST(request: Request) {
-  if (!hasAdminEnv()) return unavailable();
+async function post(request: Request, env: Env): Promise<Response> {
+  if (!hasAdminEnv(env)) return unavailable();
   if (isRateLimited(clientIp(request))) {
-    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+    return Response.json({ error: "Too many requests. Please try again later." }, { status: 429 });
   }
 
   let body: Record<string, unknown>;
@@ -151,12 +175,23 @@ export async function POST(request: Request) {
   let snapshot: ReportSnapshot | null = null;
   if (kind === "question") {
     if (!subj || !topic || !qid) return bad("question reports need subject, topicId and questionId");
-    snapshot = await buildQuestionSnapshot(subj, topic, qid);
+    snapshot = (await reportData(request, env, subj, topic))?.questions[qid] ?? null;
     if (!snapshot) return bad("Unknown question");
   } else if (kind === "chapter") {
     if (!subj || !topic) return bad("chapter reports need subject and topicId");
-    snapshot = await buildChapterSnapshot(subj, topic, sec);
-    if (!snapshot) return bad("Unknown chapter");
+    const data = await reportData(request, env, subj, topic);
+    if (!data) return bad("Unknown chapter");
+    const block = sec ? data.sections[sec] : undefined;
+    snapshot = {
+      kind: "chapter",
+      subjectLabel: data.subjectLabel,
+      topicTitle: data.topicTitle,
+      sectionSlug: sec,
+      sectionTitle: block?.title ?? null,
+      file: data.file,
+      sectionSource: block?.source ?? null,
+      sectionSourceTruncated: block?.truncated ?? false,
+    };
   }
 
   const row = {
@@ -173,33 +208,33 @@ export async function POST(request: Request) {
     learner: kind === "question" ? learner : null,
   };
 
-  const { data, error } = await createAdminClient().from("reports").insert(row).select("id").single();
+  const { data, error } = await adminClient(env).from("reports").insert(row).select("id").single();
   if (error) {
     // Schema problems stay in the server log; the client gets a generic message.
     console.error("Report insert error:", error.message, error.details, error.hint);
-    return tableMissing(error) ?? NextResponse.json({ error: "Failed to save the report" }, { status: 500 });
+    return tableMissing(error) ?? Response.json({ error: "Failed to save the report" }, { status: 500 });
   }
-  return NextResponse.json({ ok: true, id: data?.id ?? null });
+  return Response.json({ ok: true, id: data?.id ?? null });
 }
 
 // ---------------------------------------------------------------------------
 // Admin
 // ---------------------------------------------------------------------------
 
-function adminEmails(): string[] {
-  return (process.env.ADMIN_EMAIL ?? "")
+function adminEmails(env: Env): string[] {
+  return (env.ADMIN_EMAIL ?? "")
     .split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
 }
 
 /** Resolves the bearer token to an email via Supabase Auth; null when invalid. */
-async function bearerEmail(request: Request): Promise<string | null> {
+async function bearerEmail(request: Request, env: Env): Promise<string | null> {
   const auth = request.headers.get("authorization");
   if (!auth?.startsWith("Bearer ")) return null;
   const token = auth.slice(7);
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const url = env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anonKey) return null;
   const client = createClient(url, anonKey, {
     auth: { persistSession: false },
@@ -209,17 +244,17 @@ async function bearerEmail(request: Request): Promise<string | null> {
   return data.user?.email?.toLowerCase() ?? null;
 }
 
-async function requireAdmin(request: Request): Promise<NextResponse | null> {
-  const allowed = adminEmails();
-  if (allowed.length === 0) return NextResponse.json({ error: "No admin configured" }, { status: 403 });
-  const email = await bearerEmail(request);
-  if (!email || !allowed.includes(email)) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+async function requireAdmin(request: Request, env: Env): Promise<Response | null> {
+  const allowed = adminEmails(env);
+  if (allowed.length === 0) return Response.json({ error: "No admin configured" }, { status: 403 });
+  const email = await bearerEmail(request, env);
+  if (!email || !allowed.includes(email)) return Response.json({ error: "Unauthorized" }, { status: 403 });
   return null;
 }
 
-export async function GET(request: Request) {
-  if (!hasAdminEnv()) return unavailable();
-  const denied = await requireAdmin(request);
+async function get(request: Request, env: Env): Promise<Response> {
+  if (!hasAdminEnv(env)) return unavailable();
+  const denied = await requireAdmin(request, env);
   if (denied) return denied;
 
   const url = new URL(request.url);
@@ -229,7 +264,7 @@ export async function GET(request: Request) {
   const limitRaw = Number(url.searchParams.get("limit") ?? 200);
   const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(Math.trunc(limitRaw), 1), 1000) : 200;
 
-  let query = createAdminClient()
+  let query = adminClient(env)
     .from("reports")
     .select("*")
     .order("created_at", { ascending: false })
@@ -241,14 +276,14 @@ export async function GET(request: Request) {
   const { data, error } = await query;
   if (error) {
     console.error("Report fetch error:", error.message);
-    return tableMissing(error) ?? NextResponse.json({ error: "Failed to fetch reports" }, { status: 500 });
+    return tableMissing(error) ?? Response.json({ error: "Failed to fetch reports" }, { status: 500 });
   }
-  return NextResponse.json({ reports: data ?? [] });
+  return Response.json({ reports: data ?? [] });
 }
 
-export async function PATCH(request: Request) {
-  if (!hasAdminEnv()) return unavailable();
-  const denied = await requireAdmin(request);
+async function patch(request: Request, env: Env): Promise<Response> {
+  if (!hasAdminEnv(env)) return unavailable();
+  const denied = await requireAdmin(request, env);
   if (denied) return denied;
 
   let body: Record<string, unknown>;
@@ -265,13 +300,13 @@ export async function PATCH(request: Request) {
   if (ids.length === 0) return bad("ids are required");
   if (ids.length > 500) return bad("Too many ids in one update");
 
-  const { error } = await createAdminClient()
+  const { error } = await adminClient(env)
     .from("reports")
     .update({ status, resolved_at: status === "open" ? null : new Date().toISOString() })
     .in("id", ids);
   if (error) {
     console.error("Report status update error:", error.message);
-    return tableMissing(error) ?? NextResponse.json({ error: "Failed to update reports" }, { status: 500 });
+    return tableMissing(error) ?? Response.json({ error: "Failed to update reports" }, { status: 500 });
   }
-  return NextResponse.json({ ok: true, ids, status });
+  return Response.json({ ok: true, ids, status });
 }

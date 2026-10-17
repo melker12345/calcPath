@@ -3,7 +3,7 @@ import { preload } from "react-dom";
 /**
  * KaTeX's stylesheet and fonts are served from public/katex/ (see
  * scripts/sync-katex.ts). The query string changes with the KaTeX version so
- * the immutable cache header in next.config.ts is safe.
+ * the immutable cache header in out/_headers (scripts/cloudflare-assets.ts) is safe.
  */
 export const KATEX_VERSION = "0.16.28";
 export const KATEX_CSS_HREF = `/katex/katex.min.css?v=${KATEX_VERSION}`;

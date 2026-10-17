@@ -6,6 +6,8 @@ import {
 } from "@/lib/content/loader";
 import { listTopicsWithProblemSets } from "@/lib/content/problemset-loader";
 
+export const dynamic = "force-static";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = "https://calc-path.com";
 
