@@ -148,6 +148,10 @@ export function deriveSuggestionLabels(
   if (/\]/.test(answer ?? "")) add("]");
   if (/</.test(answerSrc) || /⟨/.test(answer ?? "")) add("<");
   if (/>/.test(answerSrc) || /⟩/.test(answer ?? "")) add(">");
+  // Inequalities: there is no ≤/≥ on a phone keyboard, so an answer written
+  // with \le / \ge (or the characters themselves) gets its own key.
+  if (/\\leq?\b|≤|<=/.test(answer ?? "")) add("≤");
+  if (/\\geq?\b|≥|>=/.test(answer ?? "")) add("≥");
   if (/_/.test(answer ?? "")) add("_");
   if (/\//.test(answer ?? "")) add("a/b");
   if (/\^/.test(answer ?? "")) add("xⁿ");
@@ -208,7 +212,13 @@ const KNOWN_WORD_TOKENS = [
 function tokenizeAnswer(answer: string): string[] {
   const tokens: string[] = [];
   const src = stripOptionalLabelPrefix(
-    answer.replace(/\s+/g, "").replace(/⟨/g, "<").replace(/⟩/g, ">").replace(/λ/g, "lambda"),
+    answer
+      .replace(/\\leq?\b|<=/g, "≤")
+      .replace(/\\geq?\b|>=/g, "≥")
+      .replace(/\s+/g, "")
+      .replace(/⟨/g, "<")
+      .replace(/⟩/g, ">")
+      .replace(/λ/g, "lambda"),
   );
   let i = 0;
 

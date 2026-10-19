@@ -82,6 +82,10 @@ function deriveKeys(
       case "<":
       case ">":
         return { label, action: () => write(label) };
+      case "≤":
+        return { label, action: () => write("\\le") };
+      case "≥":
+        return { label, action: () => write("\\ge") };
       case "λ":
         return { label, action: () => write("\\lambda") };
       case "sin":
