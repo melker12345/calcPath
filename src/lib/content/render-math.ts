@@ -53,6 +53,24 @@ export function renderKatex(latex: string, display: boolean): string {
 }
 
 /** `**bold**` inside a run of plain text, as the practice <MathText> supports it. */
+/**
+ * `*Title*` in a hint or solution is emphasis — a cited theorem, a book title —
+ * and renders in italics (report f5d2c98f). A `*` that follows a word
+ * character or digit, or is followed by a space, is multiplication (2*3, a * b)
+ * and is left alone.
+ */
+const ITALIC_RUN = /(?<![\w*])\*(?![\s*])([^*\n]+?)(?<!\s)\*(?![\w*])/g;
+
+function renderItalicRuns(text: string): string {
+  let out = "";
+  let last = 0;
+  for (const m of text.matchAll(ITALIC_RUN)) {
+    out += escapeHtml(text.slice(last, m.index)) + `<em>${escapeHtml(m[1])}</em>`;
+    last = m.index + m[0].length;
+  }
+  return out + escapeHtml(text.slice(last));
+}
+
 function renderBoldRuns(text: string): string {
   return text
     .split(/(\*\*[^*]+\*\*)/g)
@@ -61,7 +79,7 @@ function renderBoldRuns(text: string): string {
       const bold = seg.match(/^\*\*(.+)\*\*$/);
       return bold
         ? `<strong class="font-semibold theme-text">${escapeHtml(bold[1])}</strong>`
-        : escapeHtml(seg);
+        : renderItalicRuns(seg);
     })
     .join("");
 }

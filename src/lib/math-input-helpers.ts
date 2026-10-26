@@ -129,6 +129,9 @@ export function deriveSuggestionLabels(
   for (const token of upperFromTokens) add(token);
   if (/lambda/i.test(src)) add("λ");
   if (/theta|θ/i.test(src)) add("θ");
+  for (const { label, pattern } of GREEK_KEYS) {
+    if (pattern.test(answer ?? "")) add(label);
+  }
   // Logic and set-theory answers: a phone keyboard has none of these, so each
   // symbol the stored answer uses (as LaTeX or as the character) gets a key.
   for (const { label, pattern } of SYMBOL_KEYS) {
@@ -199,9 +202,49 @@ export const SYMBOL_KEYS: Array<{ label: string; latex: string; pattern: RegExp 
   // Set braces only: a LaTeX grouping brace (after ^, _, } or a command name)
   // is not something the learner types.
   { label: "{ }", latex: "\\{\\}", pattern: /\\\{|(?:^|[^A-Za-z^_}\\])\{/ },
+  { label: "±", latex: "\\pm", pattern: /\\pm(?![A-Za-z])|±/ },
+  { label: "↑", latex: "\\uparrow", pattern: /\\uparrow(?![A-Za-z])|↑/ },
+  { label: "∣", latex: "\\mid", pattern: /\\mid(?![A-Za-z])|∣/ },
+  { label: ";", latex: ";", pattern: /;/ },
+];
+
+/**
+ * Greek letters a stored answer may use, as LaTeX (`\\varepsilon`, `\\Delta`)
+ * or as the character. A phone keyboard has none of them, so the answer's
+ * letters each get a key (report cd0a4634). The grader reads the name.
+ */
+export const GREEK_KEYS: Array<{ label: string; name: string; latex: string; pattern: RegExp }> = [
+  { label: "α", name: "alpha", latex: "\\alpha", pattern: /\\alpha(?![A-Za-z])|α/ },
+  { label: "β", name: "beta", latex: "\\beta", pattern: /\\beta(?![A-Za-z])|β/ },
+  { label: "γ", name: "gamma", latex: "\\gamma", pattern: /\\gamma(?![A-Za-z])|γ/ },
+  { label: "δ", name: "delta", latex: "\\delta", pattern: /\\delta(?![A-Za-z])|δ/ },
+  { label: "ε", name: "epsilon", latex: "\\varepsilon", pattern: /\\(?:var)?epsilon(?![A-Za-z])|ε/ },
+  { label: "ζ", name: "zeta", latex: "\\zeta", pattern: /\\zeta(?![A-Za-z])|ζ/ },
+  { label: "η", name: "eta", latex: "\\eta", pattern: /\\eta(?![A-Za-z])|η/ },
+  { label: "κ", name: "kappa", latex: "\\kappa", pattern: /\\(?:var)?kappa(?![A-Za-z])|κ/ },
+  { label: "μ", name: "mu", latex: "\\mu", pattern: /\\mu(?![A-Za-z])|μ/ },
+  { label: "ν", name: "nu", latex: "\\nu", pattern: /\\nu(?![A-Za-z])|ν/ },
+  { label: "ξ", name: "xi", latex: "\\xi", pattern: /\\xi(?![A-Za-z])|ξ/ },
+  { label: "ρ", name: "rho", latex: "\\rho", pattern: /\\(?:var)?rho(?![A-Za-z])|ρ/ },
+  { label: "σ", name: "sigma", latex: "\\sigma", pattern: /\\(?:var)?sigma(?![A-Za-z])|σ/ },
+  { label: "τ", name: "tau", latex: "\\tau", pattern: /\\tau(?![A-Za-z])|τ/ },
+  { label: "φ", name: "phi", latex: "\\varphi", pattern: /\\(?:var)?phi(?![A-Za-z])|φ|ϕ/ },
+  { label: "χ", name: "chi", latex: "\\chi", pattern: /\\chi(?![A-Za-z])|χ/ },
+  { label: "ψ", name: "psi", latex: "\\psi", pattern: /\\psi(?![A-Za-z])|ψ/ },
+  { label: "Γ", name: "Gamma", latex: "\\Gamma", pattern: /\\Gamma(?![A-Za-z])|Γ/ },
+  { label: "Δ", name: "Delta", latex: "\\Delta", pattern: /\\Delta(?![A-Za-z])|Δ/ },
+  { label: "Σ", name: "Sigma", latex: "\\Sigma", pattern: /\\Sigma(?![A-Za-z])|Σ/ },
+  { label: "Φ", name: "Phi", latex: "\\Phi", pattern: /\\Phi(?![A-Za-z])|Φ/ },
+  { label: "Ψ", name: "Psi", latex: "\\Psi", pattern: /\\Psi(?![A-Za-z])|Ψ/ },
+  { label: "Ω", name: "Omega", latex: "\\Omega", pattern: /\\Omega(?![A-Za-z])|Ω/ },
 ];
 
 const TOKEN_LABEL_MAP: Record<string, string[]> = {
+  ...Object.fromEntries(GREEK_KEYS.map((g) => [g.label, [g.name]])),
+  "±": ["±"],
+  "↑": ["↑"],
+  "∣": ["|"],
+  ";": [";"],
   "π": ["pi"],
   "∞": ["inf"],
   "√": ["sqrt"],
@@ -239,6 +282,7 @@ const ALWAYS_AVAILABLE_TOKENS = new Set([
 const KNOWN_WORD_TOKENS = [
   "lambda",
   "theta",
+  ...GREEK_KEYS.map((g) => g.name),
   "arcsin",
   "arccos",
   "arctan",
@@ -268,10 +312,19 @@ function tokenizeAnswer(answer: string): string[] {
     .replace(/\\geq?\b|>=/g, "≥")
     .replace(/\\infty\b|infinity/g, "inf")
     .replace(/\\(?:mathbb|mathrm|mathbf|mathcal|operatorname|text)\b/g, "")
+    // A stored LaTeX fraction or root is typed with the a/b and √ keys; its
+    // grouping braces are the parentheses the keypad writes.
+    .replace(/\\frac(?![A-Za-z])/g, "/")
+    .replace(/\\sqrt(?![A-Za-z])/g, "sqrt")
+    .replace(/(?<!\\)\{/g, "(")
+    .replace(/(?<!\\)\}/g, ")")
     .replace(/\\([{}])/g, "$1")
     .replace(/\\lambda\b/g, "lambda")
     .replace(/\\theta\b|θ/g, "theta")
     .replace(/\\pi\b/g, "pi");
+  for (const { name, pattern } of GREEK_KEYS) {
+    folded = folded.replace(new RegExp(pattern.source, "g"), name);
+  }
   for (const { label, pattern } of SYMBOL_KEYS) {
     if (label === "{ }") continue;
     folded = folded.replace(new RegExp(pattern.source, "g"), label);

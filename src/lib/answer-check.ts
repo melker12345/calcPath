@@ -203,6 +203,21 @@ const UNICODE_LETTERS: Array<[RegExp, string]> = [
   [/\u03c4/g, "tau"],
   [/\u03c6/g, "phi"],
   [/\u03c9/g, "omega"],
+  [/\u03c8/g, "psi"],
+  [/\u03be/g, "xi"],
+  [/\u03ba/g, "kappa"],
+  [/\u03b7/g, "eta"],
+  [/\u03b6/g, "zeta"],
+  [/\u03bd/g, "nu"],
+  [/\u03c7/g, "chi"],
+  [/\u0394/g, "Delta"],
+  [/\u03a3/g, "Sigma"],
+  [/\u03a9/g, "Omega"],
+  [/\u03a0/g, "Pi"],
+  [/\u0393/g, "Gamma"],
+  [/\u03a6/g, "Phi"],
+  [/\u03a8/g, "Psi"],
+  [/\u2223/g, "|"],
   [/\u221e/g, "inf"],
 ];
 
@@ -257,7 +272,14 @@ const latexToPlain = (latex: string) => {
     .replace(/\\log/g, "log")
     .replace(/\\exp/g, "exp")
     .replace(/\\pi/g, "pi")
-    .replace(/\\lambda/g, "lambda");
+    .replace(/\\lambda/g, "lambda")
+    // The variant forms are the same letters: \varepsilon is epsilon.
+    .replace(/\\var(epsilon|theta|phi|sigma|rho|pi|kappa)/g, "\\$1")
+    // MathQuill turns typed "inf" into the operator \inf, so "infinity" typed
+    // letter by letter arrives as "\inf inity" (report 63c4c667).
+    .replace(/\\inf(?![a-z])/g, "inf")
+    .replace(/\\mid(?![a-z])/g, "|")
+    .replace(/\\uparrow(?![a-z])/g, "\u2191");
 
   // \sqrt[n]{x} is the nth root of x, not "sqrt[n]x": rewrite it as a power
   // before the plain-sqrt loop, which only knows the index-free form.
@@ -381,6 +403,8 @@ const canonicalizeInput = (input: string, keepLabel = false) => {
   // The word and the symbol are one value, and so is the LaTeX \\infty the
   // keypad's ∞ key produces (folded to "inf" in latexToPlain).
   out = out.replace(/infinity/g, "inf");
+  // "oo" is the keyboard spelling of infinity.
+  out = out.replace(/(^|[^a-z])oo(?![a-z])/g, "$1inf");
   // A leading sign of "+" says nothing: "+inf" and "+5" are "inf" and "5".
   out = out.replace(/^\+/, "");
   out = out
@@ -953,6 +977,14 @@ export const isAnswerCorrectAsync = async (userInput: string, expected: string) 
   const aParts = splitTopLevelList(aList) ?? expandPlusMinus(aList);
   const bParts = splitTopLevelList(bList) ?? expandPlusMinus(bList);
   if (aParts && bParts) return listsEquivalent(aParts, bParts);
+
+  // Information-theoretic answers such as 2^(n*I(Y;U)) are not expressions
+  // the sampler can evaluate (the ";" alone rules that out), so they are
+  // compared as symbols — and a product written implicitly, 2^(nI(Y;U)), is
+  // the same symbols (report 8cbca1fd).
+  if (a.includes(";") && b.includes(";")) {
+    return a.replace(/\*/g, "") === b.replace(/\*/g, "");
+  }
 
   return false;
 };

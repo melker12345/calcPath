@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef } from "react";
-import { SYMBOL_KEYS, deriveSuggestionLabels, type QuestionContext } from "@/lib/math-input-helpers";
+import { SYMBOL_KEYS, deriveSuggestionLabels, type QuestionContext, GREEK_KEYS } from "@/lib/math-input-helpers";
 
 let stylesInjected = false;
 
@@ -135,6 +135,8 @@ function deriveKeys(
       case "xⁿ":
         return { label, action: () => cmd("^") };
       default: {
+        const greek = GREEK_KEYS.find((k) => k.label === label);
+        if (greek) return { label, action: () => write(greek.latex) };
         const symbol = SYMBOL_KEYS.find((k) => k.label === label);
         if (symbol) return { label, action: () => write(symbol.latex) };
         return { label, action: () => write(label) };
