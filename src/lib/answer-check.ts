@@ -109,6 +109,7 @@ const EVALUATION_TOKENS = [
   "cosh",
   "tanh",
   "sqrt",
+  "cbrt",
   "sin",
   "cos",
   "tan",
@@ -683,6 +684,12 @@ const SAMPLE_SCOPES = [
   { x: -0.3, y: -0.25, z: 0.4, t: -0.35, n: 3, p: -0.45, s: 0.3, r: -0.2, a: -0.4, b: 0.25, c: -0.35, lambda: -0.3, d: -0.2, k: 0.45, m: 0.3, u: -0.15, v: -0.4, w: 0.35, h: 0.25, q: -0.3, theta: -0.25 },
   { x: 0.15, y: 0.3, z: 0.15, t: 0.45, n: 4, p: 0.2, s: -0.35, r: 0.15, a: 0.25, b: 0.35, c: 0.45, lambda: 0.2, d: 0.4, k: -0.3, m: 0.15, u: 0.3, v: 0.45, w: -0.25, h: 0.4, q: 0.2, theta: 0.15 },
   { x: -0.45, y: 0.2, z: -0.4, t: -0.15, n: 5, p: -0.25, s: 0.45, r: -0.45, a: 0.35, b: -0.2, c: 0.3, lambda: -0.45, d: -0.35, k: 0.15, m: -0.2, u: -0.4, v: 0.25, w: 0.45, h: -0.15, q: -0.45, theta: -0.4 },
+  // Three points with x well above 2, so that a real fractional power such as
+  // (x-2)^(1/3) — NaN for x < 2 in real arithmetic — still yields the three
+  // finite pairs the comparison needs (report 535e41d9).
+  { x: 3.3, y: 2.6, z: 3.1, t: 2.8, n: 6, p: 3.4, s: 2.9, r: 3.2, a: 2.7, b: 3.6, c: 2.4, lambda: 2.9, d: 3.1, k: 2.6, m: 3.3, u: 2.8, v: 3.5, w: 2.7, h: 3.4, q: 2.9, theta: 2.6 },
+  { x: 4.7, y: 3.9, z: 4.2, t: 4.4, n: 7, p: 4.1, s: 4.6, r: 3.8, a: 4.3, b: 4.9, c: 3.7, lambda: 4.2, d: 4.5, k: 3.9, m: 4.8, u: 4.1, v: 4.4, w: 3.6, h: 4.7, q: 4.3, theta: 3.8 },
+  { x: 6.2, y: 5.3, z: 5.8, t: 5.6, n: 8, p: 5.9, s: 5.2, r: 6.1, a: 5.5, b: 6.4, c: 5.1, lambda: 5.7, d: 6.3, k: 5.4, m: 5.9, u: 6.1, v: 5.3, w: 5.8, h: 5.6, q: 6.2, theta: 5.4 },
 ];
 
 /** "L=R" split into its two sides, or null when the string is not one equation. */

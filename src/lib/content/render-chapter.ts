@@ -32,7 +32,7 @@ import {
 } from "./math-blocks";
 import { splitMdxParts } from "./mdx";
 import { mathToPlainText, renderMathText } from "./render-math";
-import { renderProseHtml, slugify, uniqueId } from "./render-prose";
+import { renderInlineMarkdown, renderProseHtml, slugify, uniqueId } from "./render-prose";
 
 export type RenderedSegment =
   | { type: "prose"; html: string }
@@ -125,7 +125,9 @@ function renderBlockSegment(segment: MathBlockSegment, ctx: Context): RenderedSe
       captionHtml:
         `<span class="mb-env-label">${spec.label}${number ? ` ${number}` : ""}</span>` +
         `<span class="mb-env-stop">.</span>` +
-        (segment.title ? ` ${renderMathText(segment.title)}` : ""),
+        // A caption is a sentence of Markdown with TeX: *titles* and **bold**
+        // in it are typeset, not shown as asterisks (report 87fbda8b).
+        (segment.title ? ` ${renderInlineMarkdown(linkProse(segment.title, ctx))}` : ""),
     };
   }
 

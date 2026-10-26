@@ -5,6 +5,7 @@ import {
   getAvailableSubjectConfigs,
   getFileSystemContentBundle,
 } from "@/lib/content/loader";
+import { mathToPlainText } from "@/lib/content/render-math";
 
 export type SearchEntry = {
   label: string;
@@ -14,6 +15,9 @@ export type SearchEntry = {
   kind: "topic" | "section" | "page";
 };
 
+// Titles that contain TeX ("Vectors in $\mathbb{R}^n$") are indexed as plain
+// words ("Vectors in R^n"): the results list is plain text and a learner types
+// plain text (report 715d0ec2).
 // Builds the search index from content/ at build time; published as
 // /search-index.json (src/app/search-index.json/route.ts) and fetched by the
 // search dialog on first open. Sections come from the MDX-derived structure.
@@ -59,7 +63,7 @@ export async function buildSearchIndex(): Promise<SearchEntry[]> {
 
       for (const topic of bundle.topics) {
         entries.push({
-          label: topic.title,
+          label: mathToPlainText(topic.title),
           description: `${name} module`,
           href: `/${slug}/modules/${topic.id}`,
           subjectIcon: icon,
@@ -72,8 +76,8 @@ export async function buildSearchIndex(): Promise<SearchEntry[]> {
           // Falls back to title slugify (matches old behavior).
           const sectionSlug = sec.section || slugify(sec.title);
           entries.push({
-            label: sec.title,
-            description: `${topic.title} — ${name}`,
+            label: mathToPlainText(sec.title),
+            description: `${mathToPlainText(topic.title)} — ${name}`,
             href: `/${slug}/modules/${topic.id}#${sectionSlug}`,
             subjectIcon: icon,
             kind: "section",

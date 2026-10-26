@@ -64,7 +64,7 @@ export default async function AboutPage() {
         </p>
         <p>
           Every section is backed by practice questions tied to that exact
-          section, so “Review the explanation for this topic” from any practice
+          section, so “Read the section this question comes from” from any practice
           question lands you on the material it tests.
         </p>
       </Section>
@@ -79,7 +79,7 @@ export default async function AboutPage() {
           solution — every solution shows its steps, not just the result.
         </p>
         <p>
-          If a question ever seems wrongly graded, use <em>Report issue</em> on
+          If a question ever seems wrongly graded, use <em>Report a problem</em> on
           it. Reports arrive with the exact question and what was typed, and we
           read every one.
         </p>
@@ -175,7 +175,7 @@ export default async function AboutPage() {
           <Link href="/feedback" className="font-medium text-[var(--accent)] underline underline-offset-2">
             feedback page
           </Link>{" "}
-          — or use <em>Report issue</em> right where you found it.
+          — or use <em>Report a problem</em> right where you found it.
         </p>
       </Section>
     </div>

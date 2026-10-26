@@ -237,8 +237,17 @@ export function GenericPracticeExperience({
     const isCorrect = mcqVerdict ?? (await isAnswerCorrectAsync(val, current.answer));
     const currentAttempts = feedback?.type === "incorrect" ? feedback.attempts : 0;
     const hintWasUsed = feedback?.type === "incorrect" ? feedback.hintUsed : false;
+    const solutionWasShown = feedback?.type === "incorrect" && feedback.showSolution;
 
     setSubmissionLog((log) => [...log, { input: val, gradedCorrect: isCorrect, at: new Date().toISOString() }]);
+
+    // Typing the answer after the solution was revealed proves nothing, so it
+    // is not recorded as an attempt and does not mark the question solved
+    // (report 4aa5247f).
+    if (isCorrect && solutionWasShown) {
+      setFeedback({ type: "correct", afterSolution: true });
+      return;
+    }
 
     addAttempt({
       problemId: current.id,
@@ -305,6 +314,9 @@ export function GenericPracticeExperience({
   // MCQ: a choice has been graded (hint-only feedback does not count).
   const mcqAnswered = feedback?.type === "correct" || (feedback?.type === "incorrect" && feedback.attempts > 0);
   const allSolved = solvedCount >= displayProblems.length;
+  // Revisiting a question solved in an earlier session: say so, and show the
+  // answer, instead of presenting an empty input as if it were new.
+  const solvedEarlier = !feedback && progress.completedProblemIds.includes(current.id);
 
   const navButton =
     "flex h-9 min-w-9 items-center justify-center whitespace-nowrap border theme-border px-2 text-sm theme-text disabled:opacity-40";
@@ -351,6 +363,12 @@ export function GenericPracticeExperience({
         </div>
 
         {/* Answer area */}
+        {solvedEarlier && (
+          <div className="mb-4 border theme-border px-4 py-3 text-sm theme-text" role="status">
+            <span className="font-semibold">✓ Solved earlier.</span> Answer:{" "}
+            <span dangerouslySetInnerHTML={{ __html: current.html.finalAnswer }} /> You can answer it again; it stays solved.
+          </div>
+        )}
         {current.type === "mcq" ? (
           /* The choice list never disappears after answering: the correct
              choice and the selected one stay marked, in words as well as by

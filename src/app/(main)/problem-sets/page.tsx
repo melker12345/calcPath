@@ -27,7 +27,7 @@ export default async function ProblemSetsPage() {
 
   return (
     <div className="theme-bg theme-text">
-      <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
         <h1 className="text-3xl font-semibold tracking-tight theme-text">Problem sets</h1>
         <p className="mt-1 text-sm theme-text-muted">
           Printable chapter tests · {total} {total === 1 ? "sheet" : "sheets"}
@@ -98,7 +98,7 @@ export default async function ProblemSetsPage() {
           </Link>
           .
         </p>
-      </main>
+      </div>
     </div>
   );
 }

@@ -132,7 +132,7 @@ function renderInline(tokens: AnyToken[] | undefined, mathSegments: string[]): s
  * A short run of Markdown that must stay inline (a run-in paragraph's
  * remainder), with math protected exactly as for a full block.
  */
-function renderInlineMarkdown(text: string): string {
+export function renderInlineMarkdown(text: string): string {
   const { protectedSource, mathSegments } = protectMathDelimiters(text);
   return renderInline(marked.Lexer.lexInline(protectedSource) as AnyToken[], mathSegments);
 }

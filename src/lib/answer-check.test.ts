@@ -86,6 +86,9 @@ const accept: Array<[string, string]> = [
   ["e^{-\\lambda d}", "exp(-lambda*d)"],
   ["e^{-\\lambda d}", "e^(-lambda*d)"],
   ["\\theta=\\frac{\\pi}{4}", "θ=π/4"],
+  ["\\left(x-2\\right)^{\\frac{1}{3}}", "$(x - 2)^{1/3}$"],
+  ["cbrt(x-2)", "$(x - 2)^{1/3}$"],
+  ["y=(x-2)^(1/3)", "$(x - 2)^{1/3}$"],
   ["r=\\sqrt{2},\\theta=\\frac{\\pi}{4}", "r=√2, θ=π/4"],
 ];
 

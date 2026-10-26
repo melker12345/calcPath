@@ -102,7 +102,7 @@ export function ProblemSheet({
   const answersHref = `/${subjectSlug}/test/${topicId}/answers`;
 
   return (
-    <main className="ps-sheet">
+    <div className="ps-sheet">
       <nav className="ps-chrome" data-no-print>
         <Link prefetch={false} href={`/${subjectSlug}/modules/${topicId}`} className="ps-chrome-link">
           ← {set.title}
@@ -205,7 +205,7 @@ export function ProblemSheet({
           Solutions: calc-path.com{answersHref}
         </p>
       </div>
-    </main>
+    </div>
   );
 }
 
@@ -225,7 +225,7 @@ export function AnswerSheet({
   const questionsHref = `/${subjectSlug}/test/${topicId}`;
 
   return (
-    <main className="ps-sheet">
+    <div className="ps-sheet">
       <nav className="ps-chrome" data-no-print>
         <Link prefetch={false} href={questionsHref} className="ps-chrome-link">
           ← Question sheet
@@ -277,6 +277,6 @@ export function AnswerSheet({
           ← Back to the question sheet
         </Link>
       </div>
-    </main>
+    </div>
   );
 }

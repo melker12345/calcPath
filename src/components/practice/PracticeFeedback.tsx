@@ -76,7 +76,11 @@ export function PracticeFeedback({
         className="flex h-full min-h-0 flex-col border theme-border bg-[var(--surface)]"
       >
         <p className="min-h-[41px] border-b theme-border px-3 py-2 text-sm font-semibold theme-text">
-          {isCorrect ? "Correct" : "Not quite. Here is the solution."}
+          {isCorrect
+            ? feedback.afterSolution
+              ? "Correct, but the solution was already shown, so this one is not marked solved."
+              : "Correct"
+            : "Not quite. Here is the solution."}
         </p>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-5">
           {renderSteps()}

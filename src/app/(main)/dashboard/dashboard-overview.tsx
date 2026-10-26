@@ -61,7 +61,7 @@ export function DashboardOverview({ subjects }: { subjects: OverviewSubject[] })
   const nothingYet = total.chaptersRead === 0 && total.correct === 0 && total.sheetsDone === 0;
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <h1 className="font-serif text-3xl font-semibold tracking-tight theme-text">Progress</h1>
       <p className="mt-2 max-w-2xl text-sm theme-text-secondary">
         Chapters you have marked as read, practice questions answered correctly, and problem sets
@@ -128,6 +128,6 @@ export function DashboardOverview({ subjects }: { subjects: OverviewSubject[] })
       </p>
 
       <ProgressTools />
-    </main>
+    </div>
   );
 }

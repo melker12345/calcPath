@@ -38,7 +38,7 @@ export function SubjectProgress({
   const sheetsDone = sheets.filter((t) => progress.completedProblemSets.includes(chapterKey(subject.slug, t.id))).length;
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <nav className="text-sm theme-text-muted">
         <Link prefetch={false} href="/dashboard" className="hover:underline">
           Progress
@@ -177,6 +177,6 @@ export function SubjectProgress({
       <p className="mt-2 text-xs theme-text-muted">
         Practice counts unique questions answered correctly. Read and done marks are yours to set.
       </p>
-    </main>
+    </div>
   );
 }

@@ -54,7 +54,7 @@ export class PracticeErrorBoundary extends React.Component<
     if (this.state.hasError) {
       const { subjectSlug, topicId } = this.props;
       return (
-        <main className="mx-auto max-w-3xl p-8">
+        <div className="mx-auto max-w-3xl p-8">
           <div className="border theme-border bg-[var(--surface-2)] p-6">
             <h2 className="text-lg font-semibold theme-text mb-2">Practice session error</h2>
             <p className="theme-text-secondary mb-4">
@@ -86,7 +86,7 @@ export class PracticeErrorBoundary extends React.Component<
               Try again
             </button>
           </div>
-        </main>
+        </div>
       );
     }
 

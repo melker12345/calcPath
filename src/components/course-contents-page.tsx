@@ -75,7 +75,7 @@ export function CourseContentsPage({
   }, [modules]);
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="border-b theme-border pb-6">
         <SubjectBreadcrumbs subjectSlug={subjectSlug} subjectLabel={title} />
         <h1 className="mt-3 font-serif text-3xl font-semibold tracking-tight theme-text sm:text-4xl">
@@ -188,6 +188,6 @@ export function CourseContentsPage({
           })}
         </ol>
       </section>
-    </main>
+    </div>
   );
 }

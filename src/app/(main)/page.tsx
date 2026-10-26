@@ -113,7 +113,7 @@ export default async function Home() {
           so crawlers merge them. Exactly one set of nodes on this page. */}
       <JsonLd data={buildLandingJsonLd(data)} />
 
-      <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
+      <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
         <h1 className="text-3xl font-semibold tracking-tight theme-text">
           CalcPath
         </h1>
@@ -197,7 +197,7 @@ export default async function Home() {
             </div>
           ))}
         </dl>
-      </main>
+      </div>
 
     </div>
   );

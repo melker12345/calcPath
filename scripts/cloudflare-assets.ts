@@ -76,6 +76,8 @@ const redirects = [
   // Legacy top-level routes from before subjects existed.
   "/modules /calculus 308",
   "/practice /calculus 308",
+  // The nav says "Progress"; the page is /dashboard (report 2c99c458).
+  "/progress /dashboard 308",
   ...fixed.map(([from, to]) => `${from} ${to} 308`),
   "/modules/:topicId /calculus/modules/:topicId 308",
   "/practice/:topicId /calculus/practice/:topicId 308",

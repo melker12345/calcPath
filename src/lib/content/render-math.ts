@@ -101,7 +101,12 @@ export function renderMathText(text: string): string {
         // breathing room every inline formula gets.
         const leading = part.leading ? `${escapeHtml(part.leading)}${WORD_JOINER}` : "";
         const trailing = part.trailing ? `${WORD_JOINER}${escapeHtml(part.trailing)}` : "";
-        out += `<span style="margin-right:0.15em">${leading}${renderKatex(part.value, false)}${trailing}</span>`;
+        // "Sylow $2$-subgroup", "$D_4$'s": a hyphen or possessive glued to the
+        // formula gets neither the margin nor a line break before it.
+        const next = parts[index + 1];
+        const gluedNext = next?.type === "text" && /^[-'’]/.test(next.value);
+        const style = gluedNext ? "" : ' style="margin-right:0.15em"';
+        out += `<span${style}>${leading}${renderKatex(part.value, false)}${trailing}${gluedNext ? WORD_JOINER : ""}</span>`;
       }
       return;
     }
@@ -115,7 +120,7 @@ export function renderMathText(text: string): string {
       // formula gets its space too.
       const trimmedStart = textValue.trimStart();
       const startsWithOrdinal = /^(?:st|nd|rd|th)\b/i.test(trimmedStart);
-      const startsWithPunctOrSpace = /^[\s.!?;:,)\]}]/.test(textValue);
+      const startsWithPunctOrSpace = /^[\s.!?;:,)\]}'’-]/.test(textValue);
       if (textValue && !startsWithPunctOrSpace && !startsWithOrdinal) {
         textValue = " " + textValue;
       }
