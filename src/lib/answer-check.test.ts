@@ -58,7 +58,6 @@ const accept: Array<[string, string]> = [
   ["\\$5", "5"],
   ["5", "\\$5"],
   // Rounding to fewer decimals than stored is fine when it is the correct rounding.
-  ["0.3", "0.333"],
   ["1/6", "0.167"],
   ["0.6592", "0.659"],
   // Labels: omitted, or another spelling of the same thing.
@@ -99,6 +98,22 @@ const accept: Array<[string, string]> = [
   ["x^4/4+K", "x^4/4+C"],
   ["y=kx", "y=Cx"],
   ["\\ln x", "ln(x)"],
+  ["x<-2orx>4", "x < -2 or x > 4"],
+  ["x>4 or x<-2", "x < -2 or x > 4"],
+  ["x<-2∨x>4", "x < -2 or x > 4"],
+  ["2\\le x", "x≥2"],
+  ["-1+\\sqrt{3}i", "-1+i√3"],
+  ["-6i-2", "-2-6i"],
+  ["(q∨r)∧p", "p∧(q∨r)"],
+  ["(q∨¬p)∧(¬p∨r)", "(¬p∨q)∧(¬p∨r)"],
+  ["\\forall y \\neg P(y)", "\\forall x \\neg P(x)"],
+  ["x-1=0", "x=1"],
+  ["46.9\\%", "46.90"],
+  ["117.3^\\circ", "117.3"],
+  ["0.75040", "0.7504"],
+  ["2.718", "e"],
+  ["2.72", "e"],
+  ["0.333", "0.333"],
   ["y=(x-2)^(1/3)", "$(x - 2)^{1/3}$"],
   ["r=\\sqrt{2},\\theta=\\frac{\\pi}{4}", "r=√2, θ=π/4"],
 ];
@@ -132,6 +147,15 @@ const reject: Array<[string, string]> = [
   ["2+3i, 2+3i", "x = 2 ± 3i"],
   ["-\\infty", "infinity"],
   ["x^4/4", "x^4/4+C"],
+  ["0.1", "0.1151"],
+  ["0.3", "0.333"],
+  ["0.75", "0.7504"],
+  ["2.7", "e"],
+  ["-1-i\\sqrt{3}", "-1+i√3"],
+  ["¬p∨(q∧r)", "(¬p∨q)∧(¬p∨r)"],
+  ["p∧q∨r", "p∧(q∨r)"],
+  ["\\exists x \\neg P(x)", "\\forall x \\neg P(x)"],
+  ["y=1", "x=1"],
   ["y=x^2", "y=x^2+C"],
   ["y=t^2+C", "y=x^2+C"],
   ["(2.75, 0.25, 1)", "(11/4,1/4,0)"],
@@ -199,5 +223,21 @@ describe("isMcqAnswerCorrect", () => {
   it("returns null when the stored answer is not one of the choices", () => {
     expect(isMcqAnswerCorrect("1/2", "3", ["1/2", "2/4"])).toBeNull();
     expect(isMcqAnswerCorrect("1/2", "1/2", [])).toBeNull();
+  });
+});
+
+describe("requested form", () => {
+  const prompt = "Factor completely: $2x^2+7x+6$";
+  it("refuses the question's own expression and incomplete factorisations", async () => {
+    expect(await isAnswerCorrectAsync("2x^2+7x+6", "(2x+3)(x+2)", { prompt })).toBe(false);
+    expect(await isAnswerCorrectAsync("(x+2)(2x+3)", "(2x+3)(x+2)", { prompt })).toBe(true);
+    expect(
+      await isAnswerCorrectAsync("(x^2-4)(x^4+4x^2+16)", "(x-2)(x+2)(x^2+2x+4)(x^2-2x+4)", {
+        prompt: "Factor completely over the integers: $x^6-64$",
+      }),
+    ).toBe(false);
+    expect(await isAnswerCorrectAsync("(x+5)^2", "x^2+10x+25", { prompt: "Expand $(x+5)^2$." })).toBe(false);
+    expect(await isAnswerCorrectAsync("x^4x^7x", "x^{12}", { prompt: "Simplify $x^4 \\cdot x^7 \\cdot x$." })).toBe(false);
+    expect(await isAnswerCorrectAsync("(x^2-9)/(x-3)", "x + 3", { prompt: "Simplify $\\dfrac{x^2 - 9}{x - 3}$." })).toBe(false);
   });
 });

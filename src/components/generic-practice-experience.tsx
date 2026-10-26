@@ -234,7 +234,7 @@ export function GenericPracticeExperience({
     pinIndex();
     const mcqVerdict =
       current.type === "mcq" ? isMcqAnswerCorrect(val, current.answer, current.choices) : null;
-    const isCorrect = mcqVerdict ?? (await isAnswerCorrectAsync(val, current.answer));
+    const isCorrect = mcqVerdict ?? (await isAnswerCorrectAsync(val, current.answer, { prompt: current.prompt }));
     const currentAttempts = feedback?.type === "incorrect" ? feedback.attempts : 0;
     const hintWasUsed = feedback?.type === "incorrect" ? feedback.hintUsed : false;
     const solutionWasShown = feedback?.type === "incorrect" && feedback.showSolution;

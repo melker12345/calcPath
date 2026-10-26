@@ -127,6 +127,12 @@ export function deriveSuggestionLabels(
   if (hasUpperSymbol("N")) add("N");
   if (hasUpperSymbol("T")) add("T");
   for (const token of upperFromTokens) add(token);
+  // "x = 1" (a plane) or "y = -3" (a directrix): the label IS the answer's
+  // variable, so it needs a key even though labels are otherwise optional.
+  const labelLetter = (answer ?? "").replace(/^\s*\$?\s*/, "").match(/^([a-z])\s*=/i);
+  if (labelLetter) add(labelLetter[1]);
+  // "x < -2 or x > 4": one key for the word, written with its spaces.
+  if (/(^|[^a-z])or([^a-z]|$)/i.test(answer ?? "")) add("or");
   if (/lambda/i.test(src)) add("λ");
   if (/theta|θ/i.test(src)) add("θ");
   for (const { label, pattern } of GREEK_KEYS) {
@@ -241,6 +247,7 @@ export const GREEK_KEYS: Array<{ label: string; name: string; latex: string; pat
 
 const TOKEN_LABEL_MAP: Record<string, string[]> = {
   ...Object.fromEntries(GREEK_KEYS.map((g) => [g.label, [g.name]])),
+  "or": ["o", "r"],
   "±": ["±"],
   "↑": ["↑"],
   "∣": ["|"],

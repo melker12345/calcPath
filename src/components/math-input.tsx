@@ -92,6 +92,8 @@ function deriveKeys(
         return { label, action: () => write("\\theta") };
       case "{ }":
         return { label, action: () => insertFn("\\{\\}") };
+      case "or":
+        return { label, action: () => write("\\text{ or }") };
       case "sin":
         return { label, action: () => insertFn("\\sin\\left(\\right)") };
       case "cos":

@@ -33,6 +33,8 @@
  * question corpus: every stored answer respelled the ways learners type it, every
  * multiple-choice distractor, and every pair of answers within a topic.
  */
+
+import { logicEquivalent, looksLikeLogic } from "./logic-equivalence";
 const stripTrailingConstant = (input: string) => {
   // Allow optional trailing "+C" for indefinite integrals.
   // Do not strip multiplicative forms like "Ce^(2x)" or "e^(2x)C", and never
@@ -391,7 +393,7 @@ const braceExponentsToParens = (input: string) => {
  * unwrap LaTeX, fold case and whitespace, normalize the many ways a keyboard
  * can spell the same operator, and drop a label prefix like "f'(x)=".
  */
-const canonicalizeInput = (input: string, keepLabel = false) => {
+const canonicalizeInputBase = (input: string, keepLabel = false) => {
   let out = input.trim();
   if (out.includes("\\")) out = latexToPlain(out);
   out = out.toLowerCase();
@@ -466,6 +468,26 @@ const canonicalizeInput = (input: string, keepLabel = false) => {
     out = `(${out.slice(1, -1)})`;
   }
 
+  return out;
+};
+
+/** "2 ≤ x" is "x ≥ 2": the variable goes on the left (report 00a76918). */
+const FLIP = { "<": ">", ">": "<", "\u2264": "\u2265", "\u2265": "\u2264" } as const;
+const normalizeInequalitySide = (part: string): string => {
+  const m = part.match(/^(-?(?:\d+(?:\.\d+)?|pi|e))([<>\u2264\u2265])([a-z])$/);
+  if (!m) return part;
+  return `${m[3]}${FLIP[m[2] as keyof typeof FLIP]}${m[1]}`;
+};
+
+const canonicalizeInput = (input: string, keepLabel = false) => {
+  let out = canonicalizeInputBase(input.replace(/\\[dt]frac/g, "\\frac"), keepLabel);
+  // A degree sign on an angle is the unit the prompt asked for (report d6cf7e4f).
+  out = out.replace(/\^\{?\\?circ\}?|\u00b0|\\degree/g, "");
+  if (/[<>\u2264\u2265]/.test(out)) {
+    // "x<-2 or x>4", typed without spaces or with ∨, is the list "x<-2, x>4".
+    out = out.replace(/(?<=[0-9a-z)])(?:or|\u2228)(?=[a-z(-]?[a-z0-9(-]*[<>\u2264\u2265])/g, ",");
+    out = (splitTopLevelList(out) ?? [out]).map(normalizeInequalitySide).join(",");
+  }
   return out;
 };
 
@@ -746,12 +768,25 @@ const roundTo = (value: number, places: number): number => {
  * it is not.
  */
 const scalarsAgree = (a: number, b: number, aPrepared: string, bPrepared: string): boolean => {
+  if (a === b) return true;
   const aPlaces = decimalPlaces(aPrepared);
   const bPlaces = decimalPlaces(bPrepared);
   if (aPlaces === null && bPlaces === null) {
     return Math.abs(a - b) <= 1e-4;
   }
-  const places = Math.min(aPlaces ?? 12, bPlaces ?? 12);
+  // The stored answer is a decimal: it was written to the precision the
+  // question asks for, so the learner's value must agree with it at THAT
+  // precision, and may not be coarser. 0.1 is not 0.1151 to four places, and
+  // 0.75 is not 0.7504 (report e3f36995); 0.11506 is.
+  if (bPlaces !== null) {
+    if (aPlaces !== null && aPlaces < bPlaces) return false;
+    if (Math.abs(a - b) > 0.5 * 10 ** -bPlaces) return false;
+    return roundTo(a, bPlaces) === roundTo(b, bPlaces);
+  }
+  // The stored answer is exact (e, pi/4, sqrt 2, 720) and the learner gave a
+  // decimal: two places at least, and correct to the last one given.
+  if (aPlaces !== null && aPlaces < 2) return false;
+  const places = aPlaces ?? 12;
   if (Math.abs(a - b) > 0.5 * 10 ** -places) return false;
   return roundTo(a, places) === roundTo(b, places);
 };
@@ -787,22 +822,22 @@ const tryEval = (
 // the three usable pairs this check requires. Without them a correct answer
 // could only ever pass by spelling the stored string exactly.
 const SAMPLE_SCOPES = [
-  { x: -1.7, y: 0.8, z: -0.4, t: 1.2, n: 2, p: 1.5, s: 0.6, r: 1.1, a: 2.3, b: -1.1, c: 0.7, lambda: 1.9, d: 0.9, k: 1.3, m: -0.6, u: 1.7, v: -1.2, w: 0.4, h: 2.2, q: -0.7, theta: 0.8 },
-  { x: -0.8, y: -1.3, z: 0.6, t: -0.7, n: 3, p: 2.1, s: -1.2, r: 0.4, a: -0.9, b: 1.4, c: 2.2, lambda: -1.2, d: -1.4, k: 0.7, m: 2.1, u: -0.5, v: 1.6, w: -1.9, h: 0.3, q: 1.2, theta: -0.6 },
-  { x: 0.2, y: 1.1, z: 0.9, t: 0.5, n: 4, p: -0.8, s: 2.1, r: -0.7, a: 1.6, b: 0.4, c: -1.7, lambda: 0.6, d: 0.6, k: -1.1, m: 0.8, u: 2.3, v: 0.2, w: 1.1, h: -1.5, q: 0.9, theta: 1.4 },
-  { x: 0.9, y: -0.5, z: -1.4, t: 1.7, n: 5, p: 0.3, s: -0.5, r: 1.8, a: -2.5, b: 2.8, c: 1.1, lambda: 2.4, d: 2.4, k: 1.9, m: -1.3, u: 0.7, v: -2.1, w: 0.9, h: 1.2, q: -1.6, theta: -1.1 },
-  { x: 1.6, y: 0.3, z: 1.5, t: -1.1, n: 6, p: -2.2, s: 1.4, r: -1.3, a: 0.8, b: -0.6, c: 3.1, lambda: -0.9, d: -0.8, k: -0.4, m: 1.5, u: -1.8, v: 0.8, w: -0.3, h: 2.6, q: 2.1, theta: 0.3 },
-  { x: 2.1, y: -0.9, z: 0.2, t: 0.4, n: 7, p: 1.9, s: 0.9, r: 2.2, a: 1.2, b: 1.7, c: -2.6, lambda: 1.3, d: 1.1, k: 2.5, m: 0.3, u: 1.2, v: 1.9, w: -2.2, h: -0.9, q: 0.5, theta: 2.1 },
-  { x: 0.35, y: 0.45, z: -0.25, t: 0.3, n: 2, p: 0.4, s: 0.25, r: 0.35, a: 0.45, b: -0.3, c: 0.2, lambda: 0.4, d: 0.3, k: 0.25, m: -0.35, u: 0.45, v: 0.15, w: 0.2, h: -0.3, q: 0.4, theta: 0.35 },
-  { x: -0.3, y: -0.25, z: 0.4, t: -0.35, n: 3, p: -0.45, s: 0.3, r: -0.2, a: -0.4, b: 0.25, c: -0.35, lambda: -0.3, d: -0.2, k: 0.45, m: 0.3, u: -0.15, v: -0.4, w: 0.35, h: 0.25, q: -0.3, theta: -0.25 },
-  { x: 0.15, y: 0.3, z: 0.15, t: 0.45, n: 4, p: 0.2, s: -0.35, r: 0.15, a: 0.25, b: 0.35, c: 0.45, lambda: 0.2, d: 0.4, k: -0.3, m: 0.15, u: 0.3, v: 0.45, w: -0.25, h: 0.4, q: 0.2, theta: 0.15 },
-  { x: -0.45, y: 0.2, z: -0.4, t: -0.15, n: 5, p: -0.25, s: 0.45, r: -0.45, a: 0.35, b: -0.2, c: 0.3, lambda: -0.45, d: -0.35, k: 0.15, m: -0.2, u: -0.4, v: 0.25, w: 0.45, h: -0.15, q: -0.45, theta: -0.4 },
+  { x: -1.7, y: 0.8, z: -0.4, t: 1.2, n: 2, p: 1.5, s: 0.6, r: 1.1, a: 2.3, b: -1.1, c: 0.7, lambda: 1.9, d: 0.9, k: 1.3, m: -0.6, u: 1.7, v: -1.2, w: 0.4, h: 2.2, q: -0.7, theta: 0.8, i: 1.3 },
+  { x: -0.8, y: -1.3, z: 0.6, t: -0.7, n: 3, p: 2.1, s: -1.2, r: 0.4, a: -0.9, b: 1.4, c: 2.2, lambda: -1.2, d: -1.4, k: 0.7, m: 2.1, u: -0.5, v: 1.6, w: -1.9, h: 0.3, q: 1.2, theta: -0.6, i: -0.7 },
+  { x: 0.2, y: 1.1, z: 0.9, t: 0.5, n: 4, p: -0.8, s: 2.1, r: -0.7, a: 1.6, b: 0.4, c: -1.7, lambda: 0.6, d: 0.6, k: -1.1, m: 0.8, u: 2.3, v: 0.2, w: 1.1, h: -1.5, q: 0.9, theta: 1.4, i: 0.4 },
+  { x: 0.9, y: -0.5, z: -1.4, t: 1.7, n: 5, p: 0.3, s: -0.5, r: 1.8, a: -2.5, b: 2.8, c: 1.1, lambda: 2.4, d: 2.4, k: 1.9, m: -1.3, u: 0.7, v: -2.1, w: 0.9, h: 1.2, q: -1.6, theta: -1.1, i: 2.1 },
+  { x: 1.6, y: 0.3, z: 1.5, t: -1.1, n: 6, p: -2.2, s: 1.4, r: -1.3, a: 0.8, b: -0.6, c: 3.1, lambda: -0.9, d: -0.8, k: -0.4, m: 1.5, u: -1.8, v: 0.8, w: -0.3, h: 2.6, q: 2.1, theta: 0.3, i: -1.6 },
+  { x: 2.1, y: -0.9, z: 0.2, t: 0.4, n: 7, p: 1.9, s: 0.9, r: 2.2, a: 1.2, b: 1.7, c: -2.6, lambda: 1.3, d: 1.1, k: 2.5, m: 0.3, u: 1.2, v: 1.9, w: -2.2, h: -0.9, q: 0.5, theta: 2.1, i: 0.9 },
+  { x: 0.35, y: 0.45, z: -0.25, t: 0.3, n: 2, p: 0.4, s: 0.25, r: 0.35, a: 0.45, b: -0.3, c: 0.2, lambda: 0.4, d: 0.3, k: 0.25, m: -0.35, u: 0.45, v: 0.15, w: 0.2, h: -0.3, q: 0.4, theta: 0.35, i: 0.35 },
+  { x: -0.3, y: -0.25, z: 0.4, t: -0.35, n: 3, p: -0.45, s: 0.3, r: -0.2, a: -0.4, b: 0.25, c: -0.35, lambda: -0.3, d: -0.2, k: 0.45, m: 0.3, u: -0.15, v: -0.4, w: 0.35, h: 0.25, q: -0.3, theta: -0.25, i: -0.2 },
+  { x: 0.15, y: 0.3, z: 0.15, t: 0.45, n: 4, p: 0.2, s: -0.35, r: 0.15, a: 0.25, b: 0.35, c: 0.45, lambda: 0.2, d: 0.4, k: -0.3, m: 0.15, u: 0.3, v: 0.45, w: -0.25, h: 0.4, q: 0.2, theta: 0.15, i: 0.45 },
+  { x: -0.45, y: 0.2, z: -0.4, t: -0.15, n: 5, p: -0.25, s: 0.45, r: -0.45, a: 0.35, b: -0.2, c: 0.3, lambda: -0.45, d: -0.35, k: 0.15, m: -0.2, u: -0.4, v: 0.25, w: 0.45, h: -0.15, q: -0.45, theta: -0.4, i: -0.4 },
   // Three points with x well above 2, so that a real fractional power such as
   // (x-2)^(1/3) — NaN for x < 2 in real arithmetic — still yields the three
   // finite pairs the comparison needs (report 535e41d9).
-  { x: 3.3, y: 2.6, z: 3.1, t: 2.8, n: 6, p: 3.4, s: 2.9, r: 3.2, a: 2.7, b: 3.6, c: 2.4, lambda: 2.9, d: 3.1, k: 2.6, m: 3.3, u: 2.8, v: 3.5, w: 2.7, h: 3.4, q: 2.9, theta: 2.6 },
-  { x: 4.7, y: 3.9, z: 4.2, t: 4.4, n: 7, p: 4.1, s: 4.6, r: 3.8, a: 4.3, b: 4.9, c: 3.7, lambda: 4.2, d: 4.5, k: 3.9, m: 4.8, u: 4.1, v: 4.4, w: 3.6, h: 4.7, q: 4.3, theta: 3.8 },
-  { x: 6.2, y: 5.3, z: 5.8, t: 5.6, n: 8, p: 5.9, s: 5.2, r: 6.1, a: 5.5, b: 6.4, c: 5.1, lambda: 5.7, d: 6.3, k: 5.4, m: 5.9, u: 6.1, v: 5.3, w: 5.8, h: 5.6, q: 6.2, theta: 5.4 },
+  { x: 3.3, y: 2.6, z: 3.1, t: 2.8, n: 6, p: 3.4, s: 2.9, r: 3.2, a: 2.7, b: 3.6, c: 2.4, lambda: 2.9, d: 3.1, k: 2.6, m: 3.3, u: 2.8, v: 3.5, w: 2.7, h: 3.4, q: 2.9, theta: 2.6, i: 2.7 },
+  { x: 4.7, y: 3.9, z: 4.2, t: 4.4, n: 7, p: 4.1, s: 4.6, r: 3.8, a: 4.3, b: 4.9, c: 3.7, lambda: 4.2, d: 4.5, k: 3.9, m: 4.8, u: 4.1, v: 4.4, w: 3.6, h: 4.7, q: 4.3, theta: 3.8, i: 3.9 },
+  { x: 6.2, y: 5.3, z: 5.8, t: 5.6, n: 8, p: 5.9, s: 5.2, r: 6.1, a: 5.5, b: 6.4, c: 5.1, lambda: 5.7, d: 6.3, k: 5.4, m: 5.9, u: 6.1, v: 5.3, w: 5.8, h: 5.6, q: 6.2, theta: 5.4, i: 5.1 },
 ];
 
 /** "L=R" split into its two sides, or null when the string is not one equation. */
@@ -935,9 +970,14 @@ const splitTopLevelList = (input: string): string[] | null => {
   const parts: string[] = [];
   let depth = 0;
   let current = "";
+  // Angle brackets delimit a vector only when they enclose the whole answer;
+  // in "x>4, x<-2" they are inequalities and must not count as brackets.
+  const angle = input.startsWith("<") && input.endsWith(">");
+  const opens = angle ? "([{<" : "([{";
+  const closes = angle ? ")]}>" : ")]}";
   for (const char of input) {
-    if ("([{<".includes(char)) depth += 1;
-    else if (")]}>".includes(char)) depth -= 1;
+    if (opens.includes(char)) depth += 1;
+    else if (closes.includes(char)) depth -= 1;
     if (char === "," && depth === 0) {
       parts.push(current);
       current = "";
@@ -987,6 +1027,9 @@ const valuesEquivalent = async (a: string, b: string): Promise<boolean> => {
   const aNoC = bothHaveC ? stripTrailingConstant(a) : a;
   const bNoC = bothHaveC ? stripTrailingConstant(b) : b;
   if (aNoC === bNoC) return true;
+  // An inequality is a condition, not a value: "x>5" and "x>4" evaluate alike
+  // at most sample points, so they are compared only as canonical strings.
+  if (/[<>\u2264\u2265]/.test(a) || /[<>\u2264\u2265]/.test(b)) return false;
   if (await scalarNumericEquivalent(aNoC, bNoC)) return true;
   const aIdentity = await constantIdentityValue(aNoC);
   const bIdentity = await constantIdentityValue(bNoC);
@@ -1053,14 +1096,82 @@ const listsEquivalent = async (aParts: string[], bParts: string[]): Promise<bool
 };
 
 // Async version for richer checks (used by practice/test flows)
-export const isAnswerCorrectAsync = async (userInput: string, expected: string) => {
+export type GradingOptions = {
+  /**
+   * The question's prompt. "Factor", "Expand" and "Simplify" questions ask for
+   * a FORM, not just a value: with the prompt the grader refuses the
+   * question's own expression typed back, an unfactored product or an
+   * unexpanded power (report 7c34cb2c).
+   */
+  prompt?: string;
+};
+
+/** Top-level factors of a canonical product: "2*(x+2)*(x+3)" has three. */
+const topLevelFactors = (s: string): string[] | null => {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (let k = 0; k < s.length; k += 1) {
+    const ch = s[k];
+    if (ch === "(") depth += 1;
+    else if (ch === ")") depth -= 1;
+    // A + or - at the top level (other than a leading sign) means a sum.
+    if (depth === 0 && (ch === "+" || (ch === "-" && k > 0 && !"*/^(".includes(s[k - 1])))) return null;
+    if (depth === 0 && ch === "*") {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += ch;
+  }
+  parts.push(current);
+  return parts.filter((p) => p !== "");
+};
+
+const satisfiesRequestedForm = (typed: string, stored: string, prompt: string): boolean => {
+  if (typed === stored) return true;
+  // The question's own expression, typed back, is never the answer.
+  // Parentheses are dropped for this comparison only: the LaTeX fraction in
+  // the prompt and the typed one differ in grouping, not in substance.
+  const bare = (s: string) => s.replace(/[()]/g, "");
+  const fragments = [...prompt.matchAll(/\$([^$]+)\$/g)].map((m) => bare(normalizeAnswer(m[1])));
+  if (fragments.some((f) => f === bare(typed) && f !== bare(stored))) return false;
+  const head = prompt.trim().toLowerCase();
+  if (/^factor/.test(head)) {
+    const typedFactors = topLevelFactors(typed);
+    const storedFactors = topLevelFactors(stored);
+    if (!typedFactors) return false;
+    if (storedFactors && typedFactors.length < storedFactors.length) return false;
+  } else if (/^(expand|multiply out)/.test(head)) {
+    if (typed.includes("(") && !stored.includes("(")) return false;
+  }
+  return true;
+};
+
+export const isAnswerCorrectAsync = async (
+  userInput: string,
+  expected: string,
+  options: GradingOptions = {},
+): Promise<boolean> => {
+  const ok = await answersEquivalent(userInput, expected);
+  if (!ok || !options.prompt) return ok;
+  const b = normalizeAnswer(expected);
+  const a = harmonizeConstantLetter(normalizeAnswer(userInput), b);
+  return satisfiesRequestedForm(a, b, options.prompt);
+};
+
+const answersEquivalent = async (userInput: string, expected: string): Promise<boolean> => {
   // "y = -3" must not pass for "x = -3": different labels, different answers.
   if (labelsConflict(userInput, expected)) return false;
 
   const b = normalizeAnswer(expected);
   const a = harmonizeConstantLetter(normalizeAnswer(userInput), b);
   if (await valuesEquivalent(a, b)) return true;
+  // "46.9%" where the stored answer is the percentage figure 46.90: the unit
+  // the prompt asked for is not a factor of 1/100 (report d6cf7e4f).
+  if (a.endsWith("%") && !b.includes("%") && (await valuesEquivalent(a.slice(0, -1), b))) return true;
   if (await tuplesEquivalent(a, b)) return true;
+  if (looksLikeLogic(a) && looksLikeLogic(b) && logicEquivalent(a, b)) return true;
   const swapped = swapAB(a);
   if (swapped && swapAB(b) && (await valuesEquivalent(swapped, b))) return true;
 
@@ -1072,6 +1183,12 @@ export const isAnswerCorrectAsync = async (userInput: string, expected: string) 
   const aParts = splitTopLevelList(aList) ?? expandPlusMinus(aList);
   const bParts = splitTopLevelList(bList) ?? expandPlusMinus(bList);
   if (aParts && bParts) return listsEquivalent(aParts, bParts);
+
+  // "x - 1 = 0" is the plane "x = 1": with the label kept, the two are one
+  // equation (report 10f75610).
+  if (aList.includes("=") && bList.includes("=") && !aParts && !bParts && (await equationsEquivalent(aList, bList))) {
+    return true;
+  }
 
   // Information-theoretic answers such as 2^(n*I(Y;U)) are not expressions
   // the sampler can evaluate (the ";" alone rules that out), so they are

@@ -152,7 +152,6 @@ async function equivalenceSuite() {
     // Rounding: a learner may answer to fewer decimals than the stored answer
     // carries, as long as it is the correct rounding (few prompts state a
     // precision, so the stored precision cannot be held against them).
-    ["0.3", "0.333"],
     ["1/6", "0.167"],
     ["0.6592", "0.659"],
 
@@ -209,6 +208,9 @@ async function equivalenceSuite() {
     ["(2,-1)", "(-1,2)"],
     ["2,4", "x = 2 or x = 3"],
     ["-\\infty", "infinity"],
+    ["0.3", "0.333"],
+    ["0.1", "0.1151"],
+    ["x^4/4", "x^4/4+C"],
     ["e^{\\lambda d}", "exp(-lambda*d)"],
   ];
 
