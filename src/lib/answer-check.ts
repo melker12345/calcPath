@@ -400,6 +400,12 @@ const canonicalizeInput = (input: string, keepLabel = false) => {
   // types "2,3" has given the same two roots.
   out = out.replace(/\s+(?:or|and)\s+/g, ",");
   out = out.replace(/\s+/g, "");
+  // "\\ln x" and "\\sin x^2" apply the function to the one symbol that follows:
+  // give it the parentheses the evaluator needs (report 154635bb).
+  out = out.replace(
+    /(arcsin|arccos|arctan|sinh|cosh|tanh|sin|cos|tan|sec|csc|cot|ln|log|exp)(?!\()(\d+(?:\.\d+)?|[a-z])(\^(?:\d+|[a-z]|\([^()]*\)))?/g,
+    "$1($2$3)",
+  );
   // The word and the symbol are one value, and so is the LaTeX \\infty the
   // keypad's ∞ key produces (folded to "inf" in latexToPlain).
   out = out.replace(/infinity/g, "inf");
@@ -601,9 +607,92 @@ const prepareExpressionForEvaluation = (input: string) => {
 
 export const normalizeAnswer = (input: string) => {
   let out = canonicalizeInput(input);
-  out = stripTrailingConstant(out);
   out = insertImplicitMultiplication(out);
   return out;
+};
+
+/** The single-letter symbols of a canonical answer, in order, repeats kept. */
+const singleLetterTokens = (s: string): string[] =>
+  tokenizeForEvaluation(s).filter((tok) => /^[a-z]$/.test(tok));
+
+/** Rename one single-letter symbol throughout a canonical answer. */
+const renameLetter = (s: string, from: string, to: string): string =>
+  tokenizeForEvaluation(s)
+    .map((tok) => (tok === from ? to : tok))
+    .join("");
+
+/** Letters a learner might choose for an arbitrary constant. */
+const CONSTANT_LETTERS = /^[abcdkmpq]$/;
+
+/**
+ * An arbitrary constant is a name, not a value: "y = K e^(x^2/2)" is the
+ * stored "y = C e^(x^2/2)", and "x^4/4 + K" is "x^4/4 + C" (report ec52d6b3).
+ * When the learner's answer uses exactly one single letter the stored answer
+ * does not, and the stored answer uses exactly one constant-like letter the
+ * learner's does not, the learner's letter is read as that constant. A
+ * variable can never be renamed this way: x, y, t and the other sampled
+ * variables are not constant-like, so "t^2 + C" stays wrong for "x^2 + C".
+ */
+const harmonizeConstantLetter = (a: string, b: string): string => {
+  const aLetters = new Set(singleLetterTokens(a));
+  const bLetters = new Set(singleLetterTokens(b));
+  const onlyA = [...aLetters].filter((l) => !bLetters.has(l) && l !== "e" && l !== "i");
+  const onlyB = [...bLetters].filter((l) => !aLetters.has(l) && l !== "e" && l !== "i");
+  if (onlyA.length !== 1 || onlyB.length !== 1) return a;
+  if (!CONSTANT_LETTERS.test(onlyA[0]) || !CONSTANT_LETTERS.test(onlyB[0])) return a;
+  return renameLetter(a, onlyA[0], onlyB[0]);
+};
+
+/**
+ * Two arbitrary constants A and B label the two terms of a general solution,
+ * and nothing says which is which: "A x^(-3) + B x^2" is "A x^2 + B x^(-3)"
+ * (report 154635bb). The swapped reading is tried when both answers use both.
+ */
+const swapAB = (s: string): string | null => {
+  const letters = new Set(singleLetterTokens(s));
+  if (!letters.has("a") || !letters.has("b")) return null;
+  return tokenizeForEvaluation(s)
+    .map((tok) => (tok === "a" ? "b" : tok === "b" ? "a" : tok))
+    .join("");
+};
+
+/**
+ * "(11/4, 1/4, 0)", "<2/3, -1/3, 2/3>", "[[1/4,1/4],[1/4,1/4]]": a point,
+ * vector or matrix is an ORDERED list of entries, each compared as a value, so
+ * a decimal, a fraction and a LaTeX fraction are the same entry (report
+ * 9a503a29). Returns null unless the whole string is one bracketed list.
+ */
+const bracketedEntries = (s: string): { open: string; parts: string[] } | null => {
+  const open = s[0];
+  const close = { "(": ")", "[": "]", "<": ">" }[open as "(" | "[" | "<"];
+  if (!close || s[s.length - 1] !== close) return null;
+  // The opening bracket must close at the very end, or "(x-2)(x+3)" would split.
+  let depth = 0;
+  for (let i = 0; i < s.length; i += 1) {
+    if ("([<".includes(s[i])) depth += 1;
+    else if (")]>".includes(s[i])) depth -= 1;
+    if (depth === 0 && i < s.length - 1) return null;
+  }
+  const parts = splitTopLevelList(s.slice(1, -1));
+  if (!parts) return null;
+  return { open, parts };
+};
+
+const tuplesEquivalent = async (a: string, b: string): Promise<boolean> => {
+  const ta = bracketedEntries(a);
+  const tb = bracketedEntries(b);
+  if (!ta || !tb) return false;
+  if (ta.open !== tb.open || ta.parts.length !== tb.parts.length) return false;
+  for (let i = 0; i < ta.parts.length; i += 1) {
+    const x = ta.parts[i];
+    const y = tb.parts[i];
+    if (bracketedEntries(x) && bracketedEntries(y)) {
+      if (!(await tuplesEquivalent(x, y))) return false;
+    } else if (!(await valuesEquivalent(x, y))) {
+      return false;
+    }
+  }
+  return true;
 };
 
 // Numeric / expression equivalence (client-side).
@@ -891,8 +980,12 @@ const valuesEquivalent = async (a: string, b: string): Promise<boolean> => {
   // An empty submission is never a correct answer, whatever it is compared to.
   if (a === "" || b === "") return false;
   if (a === b) return true;
-  const aNoC = stripTrailingConstant(a);
-  const bNoC = stripTrailingConstant(b);
+  // A trailing "+C" is dropped from both sides only when both have one, so two
+  // antiderivatives may differ by a constant; an answer that omits the constant
+  // the stored answer carries is not the general solution (report ec52d6b3).
+  const bothHaveC = /\+c$/i.test(a) && /\+c$/i.test(b);
+  const aNoC = bothHaveC ? stripTrailingConstant(a) : a;
+  const bNoC = bothHaveC ? stripTrailingConstant(b) : b;
   if (aNoC === bNoC) return true;
   if (await scalarNumericEquivalent(aNoC, bNoC)) return true;
   const aIdentity = await constantIdentityValue(aNoC);
@@ -901,8 +994,7 @@ const valuesEquivalent = async (a: string, b: string): Promise<boolean> => {
     return valuesEquivalent(aIdentity ?? aNoC, bIdentity ?? bNoC);
   }
   if (await equationsEquivalent(aNoC, bNoC)) return true;
-  const allowConstantOffset = /\+?c$/i.test(b);
-  return expressionsEquivalent(aNoC, bNoC, allowConstantOffset);
+  return expressionsEquivalent(aNoC, bNoC, bothHaveC);
 };
 
 /**
@@ -965,9 +1057,12 @@ export const isAnswerCorrectAsync = async (userInput: string, expected: string) 
   // "y = -3" must not pass for "x = -3": different labels, different answers.
   if (labelsConflict(userInput, expected)) return false;
 
-  const a = normalizeAnswer(userInput);
   const b = normalizeAnswer(expected);
+  const a = harmonizeConstantLetter(normalizeAnswer(userInput), b);
   if (await valuesEquivalent(a, b)) return true;
+  if (await tuplesEquivalent(a, b)) return true;
+  const swapped = swapAB(a);
+  if (swapped && swapAB(b) && (await valuesEquivalent(swapped, b))) return true;
 
   // Lists are split with every label still in place, so that "x=3, y=-1"
   // keeps both of its labels for the order check below; each part drops its
