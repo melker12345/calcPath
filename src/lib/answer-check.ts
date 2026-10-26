@@ -524,8 +524,13 @@ const insertImplicitMultiplication = (s: string) => {
 
 const replaceAbsoluteValue = (input: string) => {
   let out = input;
+  // Wrapped in its own parentheses so that "ln|x+1|" becomes "ln((abs(x+1)))",
+  // a function applied to a parenthesised argument, which the ln→log rewrite
+  // and the evaluator both read; "lnabs(x+1)" was a name mathjs did not know,
+  // and every antiderivative with a log of an absolute value failed to grade
+  // (report 00167fb4).
   while (/\|[^|]+\|/.test(out)) {
-    out = out.replace(/\|([^|]+)\|/g, "abs($1)");
+    out = out.replace(/\|([^|]+)\|/g, "(abs($1))");
   }
   return out;
 };
@@ -611,6 +616,8 @@ const prepareExpressionForEvaluation = (input: string) => {
   // fire after a letter, so "2xln(x)" left an `ln` mathjs could not evaluate and
   // the whole equivalence check gave up.
   out = out.replace(/ln(?=\()/g, "log");
+  // mathjs spells the inverse trigonometric functions asin, acos, atan.
+  out = out.replace(/arc(sin|cos|tan)(?=\()/g, "a$1");
 
   const tokens = tokenizeForEvaluation(out);
   const result: string[] = [];
