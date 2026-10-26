@@ -107,6 +107,9 @@ const EVALUATION_TOKENS = [
   "arcsin",
   "arccos",
   "arctan",
+  "sech",
+  "csch",
+  "coth",
   "sinh",
   "cosh",
   "tanh",
@@ -405,7 +408,7 @@ const canonicalizeInputBase = (input: string, keepLabel = false) => {
   // "\\ln x" and "\\sin x^2" apply the function to the one symbol that follows:
   // give it the parentheses the evaluator needs (report 154635bb).
   out = out.replace(
-    /(arcsin|arccos|arctan|sinh|cosh|tanh|sin|cos|tan|sec|csc|cot|ln|log|exp)(?!\()(\d+(?:\.\d+)?|[a-z])(\^(?:\d+|[a-z]|\([^()]*\)))?/g,
+    /(arcsin|arccos|arctan|sinh|cosh|tanh|sin|cos|tan|sec|csc|cot|ln|log|exp)(?!\(|h)(\d+(?:\.\d+)?|[a-z])(\^(?:\d+|[a-z]|\([^()]*\)))?/g,
     "$1($2$3)",
   );
   // The word and the symbol are one value, and so is the LaTeX \\infty the
@@ -480,7 +483,15 @@ const normalizeInequalitySide = (part: string): string => {
 };
 
 const canonicalizeInput = (input: string, keepLabel = false) => {
-  let out = canonicalizeInputBase(input.replace(/\\[dt]frac/g, "\\frac"), keepLabel);
+  // Spacing commands (\, \; \: \! and "\ ") are typesetting, not content; a
+  // thin space in a stored formula must not become a list comma.
+  const prepared = input.replace(/\\[dt]frac/g, "\\frac").replace(/\\[,;:!]|\\ /g, " ");
+  let out = canonicalizeInputBase(prepared, keepLabel);
+  // Scientific notation: 4e-6 is 4*10^(-6), not four times Euler's number
+  // minus six (report 03f870ec).
+  out = out.replace(/(\d(?:\.\d+)?)e([+-]?\d+)(?![\d.a-z])/g, "$1*10^($2)");
+  // A logarithm to a base: log_2(10) is log(10)/log(2) (report f8f221cf).
+  out = out.replace(/log_?\{?(\d+(?:\.\d+)?|[a-z])\}?\(([^()]*)\)/g, "(log($2)/log($1))");
   // A degree sign on an angle is the unit the prompt asked for (report d6cf7e4f).
   out = out.replace(/\^\{?\\?circ\}?|\u00b0|\\degree/g, "");
   if (/[<>\u2264\u2265]/.test(out)) {
@@ -616,8 +627,6 @@ const prepareExpressionForEvaluation = (input: string) => {
   // fire after a letter, so "2xln(x)" left an `ln` mathjs could not evaluate and
   // the whole equivalence check gave up.
   out = out.replace(/ln(?=\()/g, "log");
-  // mathjs spells the inverse trigonometric functions asin, acos, atan.
-  out = out.replace(/arc(sin|cos|tan)(?=\()/g, "a$1");
 
   const tokens = tokenizeForEvaluation(out);
   const result: string[] = [];
@@ -631,7 +640,9 @@ const prepareExpressionForEvaluation = (input: string) => {
     result.push(token);
   }
 
-  return result.join("");
+  // mathjs spells the inverse trigonometric functions asin, acos, atan. Done
+  // after tokenising, or "acos" would be read as the product a*cos.
+  return result.join("").replace(/arc(sin|cos|tan)\(/g, "a$1(");
 };
 
 export const normalizeAnswer = (input: string) => {
