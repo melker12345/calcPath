@@ -27,6 +27,7 @@ import type {
   SubjectIndex,
   QuestionFile,
 } from "../src/lib/content/schema";
+import { collectCitations, collectStatementTitles, looksLikeTitle, normalizeTitle } from "../src/lib/content/crossrefs";
 import { extractMdxSectionSlugs } from "../src/lib/content/mdx";
 import { parseFigureSpec, evaluateExpression } from "../src/lib/content/figure-spec";
 import {
@@ -46,6 +47,8 @@ function hasMarker(source: string, re: RegExp): boolean {
 
 async function main() {
   const errors: string[] = [];
+  /** Every module source, for the corpus-wide cross-reference check. */
+  const moduleSources: Array<{ slug: string; tid: string; mdx: string }> = [];
 /** id -> "subject/topics/topic" where it was first seen. Corpus-wide. */
 const allProblemIds = new Map<string, string>();
   const warnings: string[] = [];
@@ -166,6 +169,7 @@ const allProblemIds = new Map<string, string>();
         errors.push(`${slug}/topics/${tid}/module.mdx: missing or unreadable`);
         continue;
       }
+      moduleSources.push({ slug, tid, mdx });
 
       // basic mdx structure
       if (!/^---[\s\S]*?title:/.test(mdx)) {
@@ -396,6 +400,34 @@ const allProblemIds = new Map<string, string>();
           `${slug}/legacy-topic-redirects.json: "${oldId}" points at section "${target.section}" of ${target.chapterId}, which no longer exists`
         );
       }
+    }
+  }
+
+  // Cross-references. STYLE.md has authors cite a statement by its title
+  // ("by the theorem *Sum rule for limits*"); the renderer links such a
+  // citation to the statement. A title that matches nothing in the subject
+  // — a renamed theorem, a paraphrase, a result that was never written — is
+  // a dead reference the reader cannot follow, so it fails here. A match in
+  // another subject is accepted: probability may cite linear algebra.
+  const titlesBySubject = new Map<string, Set<string>>();
+  const titlesEverywhere = new Set<string>();
+  for (const { slug, mdx } of moduleSources) {
+    const set = titlesBySubject.get(slug) ?? new Set<string>();
+    for (const statement of collectStatementTitles(mdx)) {
+      const key = normalizeTitle(statement.title);
+      set.add(key);
+      titlesEverywhere.add(key);
+    }
+    titlesBySubject.set(slug, set);
+  }
+  for (const { slug, tid, mdx } of moduleSources) {
+    for (const citation of collectCitations(mdx)) {
+      if (!looksLikeTitle(citation.title)) continue;
+      const key = normalizeTitle(citation.title);
+      if (titlesBySubject.get(slug)?.has(key) || titlesEverywhere.has(key)) continue;
+      errors.push(
+        `${slug}/topics/${tid}/module.mdx:${citation.line}: cites *${citation.title}*, which is not the title of any statement (cite the exact [Title] of a :::theorem/lemma/definition/example fence)`
+      );
     }
   }
 

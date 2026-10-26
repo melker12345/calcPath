@@ -83,7 +83,7 @@ export function deriveSuggestionLabels(
   const hasLowerSymbol = (symbol: string) =>
     new RegExp(`(^|[^a-z])${symbol}($|[^a-z])`).test(src);
   const hasUpperSymbol = (symbol: string) =>
-    new RegExp(`\\b${symbol}\\b|${symbol}(?=[=(a-zA-Z])`).test(answerSrc);
+    new RegExp(`\\b${symbol}(?![A-Za-z])|${symbol}(?=[=(a-zA-Z])`).test(answerSrc);
 
   if (hasLowerSymbol("x")) add("x");
   if (hasLowerSymbol("y")) add("y");
@@ -108,10 +108,16 @@ export function deriveSuggestionLabels(
   if (hasLowerSymbol("c")) add("c");
   if (hasLowerSymbol("b")) add("b");
 
-  // Any single-letter variable token required by the canonical answer (e.g. "4s").
+  // Any single-letter variable token required by the canonical answer (e.g.
+  // "4s", "2R", "k*M", "IV"): a letter the learner must type gets a key,
+  // whatever its case. LaTeX commands are single tokens, so their letters
+  // never leak onto the keypad.
+  const upperFromTokens: string[] = [];
   for (const token of tokenizeAnswer(answer ?? "")) {
     if (/^[a-z]$/.test(token) && !KNOWN_WORD_TOKENS.includes(token as (typeof KNOWN_WORD_TOKENS)[number])) {
       add(token);
+    } else if (/^[A-Z]$/.test(token)) {
+      upperFromTokens.push(token);
     }
   }
   if (hasUpperSymbol("C")) add("C");
@@ -120,7 +126,14 @@ export function deriveSuggestionLabels(
   if (hasUpperSymbol("P")) add("P");
   if (hasUpperSymbol("N")) add("N");
   if (hasUpperSymbol("T")) add("T");
+  for (const token of upperFromTokens) add(token);
   if (/lambda/i.test(src)) add("λ");
+  if (/theta|θ/i.test(src)) add("θ");
+  // Logic and set-theory answers: a phone keyboard has none of these, so each
+  // symbol the stored answer uses (as LaTeX or as the character) gets a key.
+  for (const { label, pattern } of SYMBOL_KEYS) {
+    if (pattern.test(answer ?? "")) add(label);
+  }
 
   if (/sin/i.test(src)) add("sin");
   if (/cos/i.test(src)) add("cos");
@@ -159,14 +172,49 @@ export function deriveSuggestionLabels(
   return labels;
 }
 
+/**
+ * Symbol keys for logic and set theory. `pattern` matches the stored answer in
+ * any spelling; `latex` is what the key writes into the MathQuill field.
+ * Report cb8e6375 found ~55 answers needing these with no way to type them.
+ */
+export const SYMBOL_KEYS: Array<{ label: string; latex: string; pattern: RegExp }> = [
+  { label: "∀", latex: "\\forall ", pattern: /\\forall(?![A-Za-z])|∀/ },
+  { label: "∃", latex: "\\exists ", pattern: /\\exists(?![A-Za-z])|∃/ },
+  { label: "¬", latex: "\\neg ", pattern: /\\l?not(?![A-Za-z])|\\neg(?![A-Za-z])|¬/ },
+  { label: "∧", latex: "\\wedge ", pattern: /\\land(?![A-Za-z])|\\wedge(?![A-Za-z])|∧/ },
+  { label: "∨", latex: "\\vee ", pattern: /\\lor(?![A-Za-z])|\\vee(?![A-Za-z])|∨/ },
+  { label: "→", latex: "\\to ", pattern: /\\to(?![A-Za-z])|\\rightarrow(?![A-Za-z])|\\implies(?![A-Za-z])|\\Rightarrow(?![A-Za-z])|→|⇒|->/ },
+  { label: "↔", latex: "\\leftrightarrow ", pattern: /\\leftrightarrow(?![A-Za-z])|\\Leftrightarrow(?![A-Za-z])|\\iff(?![A-Za-z])|↔|⇔|<->|<=>/ },
+  { label: "∅", latex: "\\emptyset ", pattern: /\\emptyset(?![A-Za-z])|\\varnothing(?![A-Za-z])|∅/ },
+  { label: "∈", latex: "\\in ", pattern: /\\in(?![A-Za-z])|∈/ },
+  { label: "∉", latex: "\\notin ", pattern: /\\notin(?![A-Za-z])|∉/ },
+  { label: "⊆", latex: "\\subseteq ", pattern: /\\subseteq(?![A-Za-z])|⊆/ },
+  { label: "⊂", latex: "\\subset ", pattern: /\\subset(?![A-Za-z])|⊂/ },
+  { label: "∪", latex: "\\cup ", pattern: /\\cup(?![A-Za-z])|∪/ },
+  { label: "∩", latex: "\\cap ", pattern: /\\cap(?![A-Za-z])|∩/ },
+  { label: "≠", latex: "\\ne ", pattern: /\\neq?(?![A-Za-z])|≠|!=/ },
+  { label: "ℵ", latex: "\\aleph ", pattern: /\\aleph(?![A-Za-z])|ℵ/ },
+  { label: "ω", latex: "\\omega ", pattern: /\\omega(?![A-Za-z])|ω/ },
+  { label: "Π", latex: "\\Pi ", pattern: /\\Pi(?![A-Za-z])|Π/ },
+  // Set braces only: a LaTeX grouping brace (after ^, _, } or a command name)
+  // is not something the learner types.
+  { label: "{ }", latex: "\\{\\}", pattern: /\\\{|(?:^|[^A-Za-z^_}\\])\{/ },
+];
+
 const TOKEN_LABEL_MAP: Record<string, string[]> = {
   "π": ["pi"],
   "∞": ["inf"],
   "√": ["sqrt"],
   "λ": ["lambda"],
+  "θ": ["theta"],
   "| |": ["|"],
   "a/b": ["/"],
   "xⁿ": ["^"],
+  "{ }": ["{", "}"],
+  "→": ["→"],
+  "↔": ["↔"],
+  "¬": ["¬"],
+  "≠": ["≠"],
 };
 
 const ALWAYS_AVAILABLE_TOKENS = new Set([
@@ -190,6 +238,7 @@ const ALWAYS_AVAILABLE_TOKENS = new Set([
 
 const KNOWN_WORD_TOKENS = [
   "lambda",
+  "theta",
   "arcsin",
   "arccos",
   "arctan",
@@ -211,10 +260,24 @@ const KNOWN_WORD_TOKENS = [
 
 function tokenizeAnswer(answer: string): string[] {
   const tokens: string[] = [];
+  let folded = answer
+    .replace(/\$/g, "")
+    // Spacing and sizing commands are typeset, not typed.
+    .replace(/\\[,;:! ]|\\(?:left|right|quad|qquad)(?![A-Za-z])/g, "")
+    .replace(/\\leq?\b|<=/g, "≤")
+    .replace(/\\geq?\b|>=/g, "≥")
+    .replace(/\\infty\b|infinity/g, "inf")
+    .replace(/\\(?:mathbb|mathrm|mathbf|mathcal|operatorname|text)\b/g, "")
+    .replace(/\\([{}])/g, "$1")
+    .replace(/\\lambda\b/g, "lambda")
+    .replace(/\\theta\b|θ/g, "theta")
+    .replace(/\\pi\b/g, "pi");
+  for (const { label, pattern } of SYMBOL_KEYS) {
+    if (label === "{ }") continue;
+    folded = folded.replace(new RegExp(pattern.source, "g"), label);
+  }
   const src = stripOptionalLabelPrefix(
-    answer
-      .replace(/\\leq?\b|<=/g, "≤")
-      .replace(/\\geq?\b|>=/g, "≥")
+    folded
       .replace(/\s+/g, "")
       .replace(/⟨/g, "<")
       .replace(/⟩/g, ">")
@@ -237,6 +300,18 @@ function tokenizeAnswer(answer: string): string[] {
       tokens.push(word);
       i += word.length;
       continue;
+    }
+
+    // A LaTeX command (\hat, \mathbb, \alpha) is one token, not a run of
+    // letters the keypad would otherwise offer one by one.
+    if (char === "\\") {
+      let j = i + 1;
+      while (j < src.length && /[A-Za-z]/.test(src[j])) j += 1;
+      if (j > i + 1) {
+        tokens.push(src.slice(i, j));
+        i = j;
+        continue;
+      }
     }
 
     if (/[A-Za-z]/.test(char)) {

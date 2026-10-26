@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useMemo, useRef } from "react";
-import { deriveSuggestionLabels, type QuestionContext } from "@/lib/math-input-helpers";
+import { SYMBOL_KEYS, deriveSuggestionLabels, type QuestionContext } from "@/lib/math-input-helpers";
 
 let stylesInjected = false;
 
@@ -88,6 +88,10 @@ function deriveKeys(
         return { label, action: () => write("\\ge") };
       case "λ":
         return { label, action: () => write("\\lambda") };
+      case "θ":
+        return { label, action: () => write("\\theta") };
+      case "{ }":
+        return { label, action: () => insertFn("\\{\\}") };
       case "sin":
         return { label, action: () => insertFn("\\sin\\left(\\right)") };
       case "cos":
@@ -130,8 +134,11 @@ function deriveKeys(
         return { label, action: () => cmd("\\frac") };
       case "xⁿ":
         return { label, action: () => cmd("^") };
-      default:
+      default: {
+        const symbol = SYMBOL_KEYS.find((k) => k.label === label);
+        if (symbol) return { label, action: () => write(symbol.latex) };
         return { label, action: () => write(label) };
+      }
     }
   });
 }
@@ -230,6 +237,12 @@ export function MathInput({
       return;
     }
     onChange("");
+  };
+
+  const moveCursor = (direction: "Left" | "Right") => {
+    if (!mqRef.current) return;
+    mqRef.current.keystroke(direction);
+    mqRef.current.focus();
   };
 
   const insertFunction = (latex: string) => {
@@ -335,10 +348,14 @@ export function MathInput({
       {/* Keypad: digits, operators, and the one accent-coloured action, Check.
           Digits are clickable everywhere; typing + Enter always works too. */}
       <div className="mx-auto w-full max-w-[430px] px-3 py-3">
-        <div className="grid grid-cols-5 gap-1 pb-1">
+        <div className="grid grid-cols-7 gap-1 pb-1">
           <button type="button" aria-label="parentheses" onClick={() => { write("\\left(\\right)"); mqRef.current?.keystroke("Left"); }} className={`${key} min-h-[36px]`}>( )</button>
           <button type="button" aria-label="exponent" onClick={() => cmd("^")} className={`${key} min-h-[36px]`}><span aria-hidden>x<sup className="text-[9px]">n</sup></span></button>
           <button type="button" aria-label="square root" onClick={() => cmd("\\sqrt")} className={`${key} min-h-[36px]`}>√</button>
+          {/* Cursor keys: on a phone there is no other way to step out of an
+              exponent, a fraction or a root once it has been typed. */}
+          <button type="button" aria-label="move cursor left" onClick={() => moveCursor("Left")} className={`${key} min-h-[36px]`}>←</button>
+          <button type="button" aria-label="move cursor right" onClick={() => moveCursor("Right")} className={`${key} min-h-[36px]`}>→</button>
           <button type="button" aria-label="backspace" onClick={backspace} className={`${key} min-h-[36px]`}>⌫</button>
           <button type="button" aria-label="clear all" onClick={clear} className={`${key} min-h-[36px] text-[13px] theme-text-muted`}>AC</button>
         </div>

@@ -29,3 +29,53 @@ describe("inequality keys", () => {
     expect(deriveSuggestionLabels("7", undefined)).toEqual([]);
   });
 });
+
+/**
+ * Logic and set-theory answers need symbols no phone keyboard has (report
+ * cb8e6375), and θ was missing for polar-form answers (report 5f3c8073).
+ */
+describe("symbol keys", () => {
+  it.each([
+    ["\\forall x\\, \\exists y\\, (x < y)", ["∀", "∃"]],
+    ["$\\neg p \\lor q$", ["¬", "∨"]],
+    ["p \\land q \\to r", ["∧", "→"]],
+    ["$\\emptyset$", ["∅"]],
+    ["$x \\in A \\cup B$", ["∈", "∪"]],
+    ["\\{1, 2\\}", ["{ }"]],
+    ["{1,2}", ["{ }"]],
+    ["$\\aleph_0$", ["ℵ"]],
+    ["ω", ["ω"]],
+    ["r=√2, θ=π/4", ["θ", "π", "√"]],
+    ["infinity", ["∞"]],
+  ])("%s offers %j", (answer, keys) => {
+    const labels = deriveSuggestionLabels(answer, undefined);
+    for (const key of keys) expect(labels).toContain(key);
+    expect(analyzeAnswerInput(answer, undefined).canEnter).toBe(true);
+  });
+
+  it("a LaTeX grouping brace is not a set brace", () => {
+    expect(deriveSuggestionLabels("\\frac{1}{2}", undefined)).not.toContain("{ }");
+    expect(deriveSuggestionLabels("x^{2}", undefined)).not.toContain("{ }");
+  });
+});
+
+/** Letters the answer needs get keys whatever their case (report cb8e6375). */
+describe("letter keys", () => {
+  it.each([
+    ["IV", ["I", "V"]],
+    ["2R", ["R"]],
+    ["k*M", ["k", "M"]],
+  ])("%s offers %j", (answer, keys) => {
+    const labels = deriveSuggestionLabels(answer, undefined);
+    for (const key of keys) expect(labels).toContain(key);
+    expect(analyzeAnswerInput(answer, undefined).canEnter).toBe(true);
+  });
+
+  it("the letters of a LaTeX command are not offered", () => {
+    const labels = deriveSuggestionLabels("$\\hat{x}$", undefined);
+    expect(labels).toContain("x");
+    expect(labels).not.toContain("h");
+    expect(labels).not.toContain("a");
+    expect(labels).not.toContain("t");
+  });
+});

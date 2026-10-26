@@ -10,6 +10,8 @@
  * caller passes `uid`, unique within the page, to namespace the marker ids.
  */
 
+import type { ReactNode } from "react";
+
 import {
   computeLayout,
   evaluateExpression,
@@ -234,7 +236,7 @@ function MarkView({ mark, spec, uid, layout, sx, sy, project }: Projector) {
           ))}
           {mark.label && end && (
             <text x={sx(end[0]) - 6} y={sy(end[1]) - 10} className={`fig-label ${tone}`} textAnchor="end">
-              {mark.label}
+              {figureText(mark.label)}
             </text>
           )}
         </>
@@ -248,7 +250,7 @@ function MarkView({ mark, spec, uid, layout, sx, sy, project }: Projector) {
           <polyline points={mark.points.map(project).join(" ")} className={`fig-curve ${tone} ${dash}`} />
           {mark.label && end && (
             <text x={sx(end[0]) - 6} y={sy(end[1]) - 10} className={`fig-label ${tone}`} textAnchor="end">
-              {mark.label}
+              {figureText(mark.label)}
             </text>
           )}
         </>
@@ -283,7 +285,7 @@ function MarkView({ mark, spec, uid, layout, sx, sy, project }: Projector) {
           />
           {mark.label && (
             <text x={sx(mid[0])} y={sy(mid[1]) - 10} className={`fig-label ${tone}`} textAnchor="middle">
-              {mark.label}
+              {figureText(mark.label)}
             </text>
           )}
         </>
@@ -301,7 +303,7 @@ function MarkView({ mark, spec, uid, layout, sx, sy, project }: Projector) {
           />
           {mark.label && (
             <text x={sx(mark.at[0]) + 9} y={sy(mark.at[1]) - 9} className={`fig-label ${tone}`}>
-              {mark.label}
+              {figureText(mark.label)}
             </text>
           )}
         </>
@@ -330,7 +332,7 @@ function MarkView({ mark, spec, uid, layout, sx, sy, project }: Projector) {
           />
           {mark.label && (
             <text x={sx(mid[0]) + 10} y={sy(mid[1]) - 8} className={`fig-label ${tone}`}>
-              {mark.label}
+              {figureText(mark.label)}
             </text>
           )}
         </>
@@ -357,7 +359,7 @@ function MarkView({ mark, spec, uid, layout, sx, sy, project }: Projector) {
               className="fig-label fig-accent"
               textAnchor="middle"
             >
-              {mark.label}
+              {figureText(mark.label)}
             </text>
           )}
         </>
@@ -406,7 +408,7 @@ function MarkView({ mark, spec, uid, layout, sx, sy, project }: Projector) {
           <polyline points={pts.map(project).join(" ")} className={`fig-curve ${tone} ${dash}`} />
           {mark.label && (
             <text x={sx(end[0]) - 6} y={sy(end[1]) - 10} className={`fig-label ${tone}`} textAnchor="end">
-              {mark.label}
+              {figureText(mark.label)}
             </text>
           )}
         </>
@@ -421,7 +423,7 @@ function MarkView({ mark, spec, uid, layout, sx, sy, project }: Projector) {
           <path d={`M ${mark.points.map(project).join(" L ")} Z`} className={`fig-area ${tone}`} />
           {mark.label && (
             <text x={sx(c[0])} y={sy(c[1])} className="fig-label fig-accent" textAnchor="middle">
-              {mark.label}
+              {figureText(mark.label)}
             </text>
           )}
         </>
@@ -447,7 +449,7 @@ function MarkView({ mark, spec, uid, layout, sx, sy, project }: Projector) {
             className={`fig-label ${tone}`}
             textAnchor="middle"
           >
-            {mark.text}
+            {figureText(mark.text)}
           </text>
         </>
       );
@@ -460,3 +462,43 @@ function MarkView({ mark, spec, uid, layout, sx, sy, project }: Projector) {
 
 /** Exposed so a spec can be sanity-checked outside a render (scripts, tests). */
 export { evaluateExpression };
+
+/**
+ * A label's text with `x^2` and `a_n` set as super- and subscripts, so a plot
+ * labelled "y = x^5 - 6x + 3" reads as mathematics rather than as source. The
+ * exponent or index is the braced or bracketed group after the sign, else the
+ * run of letters, digits and dots. A tspan's dy moves the glyphs that follow
+ * it, so the shift is undone on the first glyph after the script.
+ */
+export function figureText(text: string): ReactNode {
+  const re = /([\^_])(\{[^}]*\}|\([^)]*\)|[A-Za-z0-9.]+)/g;
+  const pieces: ReactNode[] = [];
+  let last = 0;
+  // The em shift that brings the baseline back after the previous script.
+  let reset = 0;
+  let m: RegExpExecArray | null;
+  const push = (content: string, dy: number) => {
+    pieces.push(dy ? <tspan key={pieces.length} dy={`${dy}em`}>{content}</tspan> : content);
+  };
+  while ((m = re.exec(text)) !== null) {
+    const before = text.slice(last, m.index);
+    if (before) {
+      push(before, reset);
+      reset = 0;
+    }
+    const raw = m[2];
+    const script = raw.startsWith("{") || raw.startsWith("(") ? raw.slice(1, -1) : raw;
+    const shift = m[1] === "^" ? -0.45 : 0.45;
+    pieces.push(
+      <tspan key={pieces.length} dy={`${shift + reset}em`} fontSize="72%">
+        {script}
+      </tspan>,
+    );
+    reset = -shift;
+    last = m.index + m[0].length;
+  }
+  if (pieces.length === 0) return text;
+  const rest = text.slice(last);
+  if (rest) push(rest, reset);
+  return pieces;
+}

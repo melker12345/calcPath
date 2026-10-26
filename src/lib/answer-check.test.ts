@@ -70,6 +70,23 @@ const accept: Array<[string, string]> = [
   ["1, -1", "1,-1"],
   ["3,3,2,1", "1,2,3,3"],
   ["3,-3", "x = 3, x = -3"],
+  // "or" / "and" separate the values of a list (report 5f3c8073).
+  ["2,3", "x = 2 or x = 3"],
+  ["3, 2", "x = 2 or x = 3"],
+  ["x=3, x=2", "x = 2 or x = 3"],
+  ["8,-8", "x = 8 and x = -8"],
+  // ± is the two-element list it abbreviates.
+  ["2+3i, 2-3i", "x = 2 ± 3i"],
+  ["2 \\pm 3i", "x = 2 ± 3i"],
+  // Infinity: the word, the symbol and the keypad's \infty (report cb8e6375).
+  ["\\infty", "infinity"],
+  ["∞", "infinity"],
+  ["\\infty", "+infinity"],
+  // Greek letters typed from the keypad (report a1ac8a8f).
+  ["e^{-\\lambda d}", "exp(-lambda*d)"],
+  ["e^{-\\lambda d}", "e^(-lambda*d)"],
+  ["\\theta=\\frac{\\pi}{4}", "θ=π/4"],
+  ["r=\\sqrt{2},\\theta=\\frac{\\pi}{4}", "r=√2, θ=π/4"],
 ];
 
 const reject: Array<[string, string]> = [
@@ -94,8 +111,13 @@ const reject: Array<[string, string]> = [
   ["y = -3", "x = -3"],
   ["N=10", "T=10"],
   ["x=3, y=-1", "x=-1, y=3"],
+  ["x=3, y=2", "x = 2 or x = 3"],
   // Lists still have to contain the right values.
   ["1,2", "1,-1"],
+  ["2,4", "x = 2 or x = 3"],
+  ["2+3i, 2+3i", "x = 2 ± 3i"],
+  ["-\\infty", "infinity"],
+  ["e^{\\lambda d}", "exp(-lambda*d)"],
   ["1,2,3", "1,2,3,3"],
   ["(2,-1)", "(-1,2)"],
 ];

@@ -22,10 +22,22 @@ async function loadIndex(): Promise<SearchEntry[]> {
   return (await res.json()) as SearchEntry[];
 }
 
+/**
+ * Lower-case and strip diacritics and apostrophes, so "lhopital" and
+ * "L'Hopital" both find "L'Hôpital's Rule".
+ */
+function fold(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['’]/g, "")
+    .toLowerCase();
+}
+
 function matchScore(entry: SearchEntry, query: string): number {
-  const q = query.toLowerCase();
-  const label = entry.label.toLowerCase();
-  const desc = entry.description.toLowerCase();
+  const q = fold(query);
+  const label = fold(entry.label);
+  const desc = fold(entry.description);
 
   if (label === q) return 100;
   if (label.startsWith(q)) return 80;

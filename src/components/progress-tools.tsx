@@ -37,11 +37,22 @@ export function ProgressTools() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
+      let parsed: unknown;
       try {
-        importProgress(JSON.parse((ev.target?.result as string) || ""));
+        parsed = JSON.parse((ev.target?.result as string) || "");
+      } catch {
+        setMessage({ text: "Import failed: this isn't a CalcPath progress file (it is not valid JSON).", ok: false });
+        return;
+      }
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        setMessage({ text: "Import failed: this isn't a CalcPath progress file.", ok: false });
+        return;
+      }
+      try {
+        importProgress(parsed);
         setMessage({ text: "Progress imported.", ok: true });
       } catch (err: unknown) {
-        setMessage({ text: "Import failed: " + (err instanceof Error ? err.message : "invalid JSON file"), ok: false });
+        setMessage({ text: "Import failed: " + (err instanceof Error ? err.message : "this isn't a CalcPath progress file."), ok: false });
       }
     };
     reader.onerror = () => setMessage({ text: "Failed to read the file.", ok: false });

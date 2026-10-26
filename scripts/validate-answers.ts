@@ -166,6 +166,14 @@ async function equivalenceSuite() {
     ["1, -1", "1,-1"],
     ["3,3,2,1", "1,2,3,3"],
     ["3,-3", "x = 3, x = -3"],
+    ["2,3", "x = 2 or x = 3"],
+    ["8,-8", "x = 8 and x = -8"],
+    ["2+3i, 2-3i", "x = 2 ± 3i"],
+
+    // Infinity and Greek letters as the keypad produces them.
+    ["\\infty", "infinity"],
+    ["e^{-\\lambda d}", "exp(-lambda*d)"],
+    ["r=\\sqrt{2},\\theta=\\frac{\\pi}{4}", "r=√2, θ=π/4"],
   ];
   // Pairs that MUST be rejected.
   const shouldReject: Array<[string, string]> = [
@@ -199,6 +207,9 @@ async function equivalenceSuite() {
     ["1,2", "1,-1"],
     ["1,2,3", "1,2,3,3"],
     ["(2,-1)", "(-1,2)"],
+    ["2,4", "x = 2 or x = 3"],
+    ["-\\infty", "infinity"],
+    ["e^{\\lambda d}", "exp(-lambda*d)"],
   ];
 
   const accepts: string[] = [];
@@ -325,6 +336,19 @@ const numericValue = (value: string): number | null => {
 };
 
 /**
+ * Does this answer denote a list of plain numbers — "2 and 3", "x = 2 or
+ * x = 3", "1, -1"? Two such lists may coincide for the same reason two
+ * numbers may: both questions have the same roots.
+ */
+const isNumericList = (value: string): boolean => {
+  const parts = value
+    .replace(/\s+(?:or|and)\s+/gi, ",")
+    .split(",")
+    .map((part) => part.trim().replace(/^[a-z](?:_[a-z0-9]+)?\s*=\s*/i, ""));
+  return parts.length >= 2 && parts.every((part) => part !== "" && numericValue(part) !== null);
+};
+
+/**
  * A `numeric` question is answered through MathInput, so its stored answer has
  * to be something a learner can actually type there: a number, an expression, a
  * formula. An answer that is really a sentence ("k-means clustering.", "The
@@ -390,6 +414,7 @@ async function crossQuestionSweep(items: Loaded[]) {
         // Two numeric answers may legitimately agree (3^2 and 9), and how close
         // counts is the tolerance rules' business, tested in the suite above.
         if (numericValue(aAnswer) !== null && numericValue(bAnswer) !== null) continue;
+        if (isNumericList(aAnswer) && isNumericList(bAnswer)) continue;
         pairs += 1;
         if (await isAnswerCorrectAsync(aAnswer, bAnswer)) {
           failures.push(

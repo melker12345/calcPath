@@ -117,7 +117,8 @@ function renderInline(tokens: AnyToken[] | undefined, mathSegments: string[]): s
           const inner = link.tokens?.length
             ? renderInline(link.tokens as AnyToken[], mathSegments)
             : renderMathText(restoreMath(link.text || "", mathSegments));
-          return `<a href="${escapeHtml(href)}" class="text-[var(--accent)] underline underline-offset-2"${external ? ' target="_blank" rel="noopener noreferrer"' : ""}>${inner}</a>`;
+          const title = link.title ? ` title="${escapeHtml(restoreMath(link.title, mathSegments))}"` : "";
+          return `<a href="${escapeHtml(href)}" class="text-[var(--accent)] underline underline-offset-2"${title}${external ? ' target="_blank" rel="noopener noreferrer"' : ""}>${inner}</a>`;
         }
         default:
           // Anything else (inline html, images, …) is shown as its text.

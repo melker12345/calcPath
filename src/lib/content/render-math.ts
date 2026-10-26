@@ -71,6 +71,9 @@ function renderBoldRuns(text: string): string {
  * twin of <MathText>'s inline mode: the same spacing rules around formulas,
  * the same treatment of tall inline math, the same glued punctuation.
  */
+/** U+2060: no line break may occur on either side of it. */
+const WORD_JOINER = "\u2060";
+
 export function renderMathText(text: string): string {
   const parts = glueTrailingPunctuation(splitMath(normalizeMathText(text)));
   let out = "";
@@ -89,9 +92,16 @@ export function renderMathText(text: string): string {
       if (isTallInlineMath(part.value)) {
         out += `<span class="whitespace-nowrap"><span class="math-tall">${renderKatex(part.value, false)}</span>${escapeHtml(part.trailing ?? "")}</span>`;
       } else {
-        // whitespace-nowrap keeps glued punctuation on the formula's line; the
-        // small right margin is the breathing room every inline formula gets.
-        out += `<span class="whitespace-nowrap" style="margin-right:0.15em">${escapeHtml(part.leading ?? "")}${renderKatex(part.value, false)}${escapeHtml(part.trailing ?? "")}</span>`;
+        // Glued punctuation stays on the formula's line through a word joiner
+        // (U+2060), which forbids a break on either side of itself. The whole
+        // formula is NOT wrapped in nowrap: KaTeX splits inline math into
+        // breakable pieces at top-level relations and operators, and a nowrap
+        // wrapper defeated that, so a long inline equation ran off the edge of
+        // a phone screen (report 5f3c8073). The small right margin is the
+        // breathing room every inline formula gets.
+        const leading = part.leading ? `${escapeHtml(part.leading)}${WORD_JOINER}` : "";
+        const trailing = part.trailing ? `${WORD_JOINER}${escapeHtml(part.trailing)}` : "";
+        out += `<span style="margin-right:0.15em">${leading}${renderKatex(part.value, false)}${trailing}</span>`;
       }
       return;
     }
@@ -172,4 +182,38 @@ export function renderMathParagraphs(text: string): string[] {
     .map((para) => para.trim())
     .filter(Boolean)
     .map(renderMathHtml);
+}
+
+const PLAIN_SYMBOLS: Record<string, string> = {
+  le: "≤", leq: "≤", ge: "≥", geq: "≥", ne: "≠", neq: "≠", to: "→", infty: "∞", cdot: "·", times: "×",
+  pm: "±", in: "∈", notin: "∉", subset: "⊂", subseteq: "⊆", cup: "∪", cap: "∩", emptyset: "∅",
+  varnothing: "∅", sum: "Σ", prod: "Π", int: "∫", partial: "∂", nabla: "∇", circ: "∘", ldots: "…", dots: "…",
+  cdots: "…", langle: "⟨", rangle: "⟩", mid: "|", lvert: "|", rvert: "|", lVert: "‖", rVert: "‖", degree: "°",
+};
+
+/**
+ * Markdown-with-TeX reduced to words, for an aria-label or alt text. A screen
+ * reader given the caption source reads out dollar signs, backslashes and
+ * braces; this keeps the symbols a listener can follow (√, ≤, Greek names) and
+ * drops the markup. It is lossy by design and never used for display.
+ */
+export function mathToPlainText(text: string): string {
+  let out = text;
+  // Markdown: links keep their text; emphasis and code markers go.
+  out = out.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1");
+  out = out.replace(/`([^`]*)`/g, "$1");
+  out = out.replace(/\*\*([^*]+)\*\*/g, "$1").replace(/\*([^*]+)\*/g, "$1");
+  // TeX structures with a spoken form.
+  for (let i = 0; i < 4; i++) {
+    out = out.replace(/\\(?:d|t)?frac\{([^{}]*)\}\{([^{}]*)\}/g, "($1)/($2)");
+    out = out.replace(/\\sqrt\[([^\]]*)\]\{([^{}]*)\}/g, "$1-th root of ($2)");
+    out = out.replace(/\\sqrt\{([^{}]*)\}/g, "√($1)");
+    out = out.replace(/\\(?:mathbb|mathbf|mathrm|mathcal|mathfrak|boldsymbol|operatorname|text|textbf|textit|overline|bar|hat|vec|tilde|widehat|widetilde|underline|mathit|mathsf)\{([^{}]*)\}/g, "$1");
+  }
+  out = out.replace(/\\left|\\right|\\big[lr]?|\\Big[lr]?|\\bigg[lr]?|\\Bigg[lr]?/g, "");
+  out = out.replace(/\\[,;:!]|\\quad|\\qquad|\\ /g, " ");
+  out = out.replace(/\\([A-Za-z]+)/g, (whole, name: string) => PLAIN_SYMBOLS[name] ?? name);
+  out = out.replace(/\\([{}%&$#_])/g, "$1");
+  out = out.replace(/[${}]/g, "");
+  return out.replace(/\s+/g, " ").trim();
 }

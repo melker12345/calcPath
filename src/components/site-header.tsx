@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { SearchTrigger } from "@/components/search-command";
+import { SearchTrigger, useSearch } from "@/components/search-command";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useClientMounted } from "@/hooks/use-client-mounted";
 import type { NavSubject } from "@/lib/shared-types";
@@ -117,6 +117,16 @@ function MobileDrawer({
   subjects?: Array<{ slug: string; label: string; icon?: string; category?: string }>;
 }) {
   const mounted = useClientMounted();
+  const { open: openSearch } = useSearch();
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
 
   useEffect(() => {
     if (!open) return;
@@ -160,6 +170,20 @@ function MobileDrawer({
         </div>
 
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 py-4">
+          <button
+            type="button"
+            className="flex items-center gap-3 border theme-border px-4 py-3 text-base font-medium theme-text"
+            onClick={() => {
+              onClose();
+              openSearch();
+            }}
+          >
+            <svg className="h-5 w-5 theme-text-muted" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden="true">
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />
+            </svg>
+            Search
+          </button>
+
           <div className="px-4 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[1px] theme-text-muted">Subjects</div>
           {subjects.map((subject) => (
             <Link prefetch={false}

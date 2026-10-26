@@ -121,6 +121,7 @@ const EVALUATION_TOKENS = [
   "pi",
   "inf",
   "lambda",
+  "theta",
 ] as const;
 
 /**
@@ -367,11 +368,20 @@ const braceExponentsToParens = (input: string) => {
  * unwrap LaTeX, fold case and whitespace, normalize the many ways a keyboard
  * can spell the same operator, and drop a label prefix like "f'(x)=".
  */
-const canonicalizeInput = (input: string) => {
+const canonicalizeInput = (input: string, keepLabel = false) => {
   let out = input.trim();
   if (out.includes("\\")) out = latexToPlain(out);
   out = out.toLowerCase();
+  // "x = 2 or x = 3" and "x = 8 and x = -8" are the lists "x=2,x=3" and
+  // "x=8,x=-8": the word is a separator between values, and a learner who
+  // types "2,3" has given the same two roots.
+  out = out.replace(/\s+(?:or|and)\s+/g, ",");
   out = out.replace(/\s+/g, "");
+  // The word and the symbol are one value, and so is the LaTeX \\infty the
+  // keypad's ∞ key produces (folded to "inf" in latexToPlain).
+  out = out.replace(/infinity/g, "inf");
+  // A leading sign of "+" says nothing: "+inf" and "+5" are "inf" and "5".
+  out = out.replace(/^\+/, "");
   out = out
     .replace(/\u2212/g, "-")
     .replace(/\u00d7/g, "*")
@@ -413,7 +423,7 @@ const canonicalizeInput = (input: string) => {
 
   // Match the label while any subscript is still visible — deleting "_" first
   // turned "v_0=" into "v0=", which no label pattern recognises.
-  out = stripOptionalLabelPrefix(out);
+  if (!keepLabel) out = stripOptionalLabelPrefix(out);
   out = out.replace(/_/g, "");
   // A sentence-ending period is punctuation, not arithmetic.
   out = out.replace(/\.$/, "");
@@ -502,12 +512,15 @@ const tokenizeForEvaluation = (input: string) => {
   return tokens;
 };
 
+// Named constants and Greek letters stand for values: "lambda*d" needs the
+// "*" that "lambda d" leaves implicit, exactly as "2x" does.
+const NAMED_VALUE_TOKENS = new Set(["pi", "inf", "lambda", "theta"]);
+
 const isValueToken = (token: string) =>
   /^[\d.]+$/.test(token) ||
   /^[a-z]$/.test(token) ||
   token === ")" ||
-  token === "pi" ||
-  token === "inf";
+  NAMED_VALUE_TOKENS.has(token);
 
 const FUNCTION_TOKENS = [
   "combinations",
@@ -535,8 +548,7 @@ const startsValueLike = (token: string) =>
   /^[\d.]+$/.test(token) ||
   /^[a-z]$/.test(token) ||
   token === "(" ||
-  token === "pi" ||
-  token === "inf" ||
+  NAMED_VALUE_TOKENS.has(token) ||
   isFunctionToken(token);
 
 const prepareExpressionForEvaluation = (input: string) => {
@@ -661,16 +673,16 @@ const tryEval = (
 // the three usable pairs this check requires. Without them a correct answer
 // could only ever pass by spelling the stored string exactly.
 const SAMPLE_SCOPES = [
-  { x: -1.7, y: 0.8, z: -0.4, t: 1.2, n: 2, p: 1.5, s: 0.6, r: 1.1, a: 2.3, b: -1.1, c: 0.7, lambda: 1.9 },
-  { x: -0.8, y: -1.3, z: 0.6, t: -0.7, n: 3, p: 2.1, s: -1.2, r: 0.4, a: -0.9, b: 1.4, c: 2.2, lambda: -1.2 },
-  { x: 0.2, y: 1.1, z: 0.9, t: 0.5, n: 4, p: -0.8, s: 2.1, r: -0.7, a: 1.6, b: 0.4, c: -1.7, lambda: 0.6 },
-  { x: 0.9, y: -0.5, z: -1.4, t: 1.7, n: 5, p: 0.3, s: -0.5, r: 1.8, a: -2.5, b: 2.8, c: 1.1, lambda: 2.4 },
-  { x: 1.6, y: 0.3, z: 1.5, t: -1.1, n: 6, p: -2.2, s: 1.4, r: -1.3, a: 0.8, b: -0.6, c: 3.1, lambda: -0.9 },
-  { x: 2.1, y: -0.9, z: 0.2, t: 0.4, n: 7, p: 1.9, s: 0.9, r: 2.2, a: 1.2, b: 1.7, c: -2.6, lambda: 1.3 },
-  { x: 0.35, y: 0.45, z: -0.25, t: 0.3, n: 2, p: 0.4, s: 0.25, r: 0.35, a: 0.45, b: -0.3, c: 0.2, lambda: 0.4 },
-  { x: -0.3, y: -0.25, z: 0.4, t: -0.35, n: 3, p: -0.45, s: 0.3, r: -0.2, a: -0.4, b: 0.25, c: -0.35, lambda: -0.3 },
-  { x: 0.15, y: 0.3, z: 0.15, t: 0.45, n: 4, p: 0.2, s: -0.35, r: 0.15, a: 0.25, b: 0.35, c: 0.45, lambda: 0.2 },
-  { x: -0.45, y: 0.2, z: -0.4, t: -0.15, n: 5, p: -0.25, s: 0.45, r: -0.45, a: 0.35, b: -0.2, c: 0.3, lambda: -0.45 },
+  { x: -1.7, y: 0.8, z: -0.4, t: 1.2, n: 2, p: 1.5, s: 0.6, r: 1.1, a: 2.3, b: -1.1, c: 0.7, lambda: 1.9, d: 0.9, k: 1.3, m: -0.6, u: 1.7, v: -1.2, w: 0.4, h: 2.2, q: -0.7, theta: 0.8 },
+  { x: -0.8, y: -1.3, z: 0.6, t: -0.7, n: 3, p: 2.1, s: -1.2, r: 0.4, a: -0.9, b: 1.4, c: 2.2, lambda: -1.2, d: -1.4, k: 0.7, m: 2.1, u: -0.5, v: 1.6, w: -1.9, h: 0.3, q: 1.2, theta: -0.6 },
+  { x: 0.2, y: 1.1, z: 0.9, t: 0.5, n: 4, p: -0.8, s: 2.1, r: -0.7, a: 1.6, b: 0.4, c: -1.7, lambda: 0.6, d: 0.6, k: -1.1, m: 0.8, u: 2.3, v: 0.2, w: 1.1, h: -1.5, q: 0.9, theta: 1.4 },
+  { x: 0.9, y: -0.5, z: -1.4, t: 1.7, n: 5, p: 0.3, s: -0.5, r: 1.8, a: -2.5, b: 2.8, c: 1.1, lambda: 2.4, d: 2.4, k: 1.9, m: -1.3, u: 0.7, v: -2.1, w: 0.9, h: 1.2, q: -1.6, theta: -1.1 },
+  { x: 1.6, y: 0.3, z: 1.5, t: -1.1, n: 6, p: -2.2, s: 1.4, r: -1.3, a: 0.8, b: -0.6, c: 3.1, lambda: -0.9, d: -0.8, k: -0.4, m: 1.5, u: -1.8, v: 0.8, w: -0.3, h: 2.6, q: 2.1, theta: 0.3 },
+  { x: 2.1, y: -0.9, z: 0.2, t: 0.4, n: 7, p: 1.9, s: 0.9, r: 2.2, a: 1.2, b: 1.7, c: -2.6, lambda: 1.3, d: 1.1, k: 2.5, m: 0.3, u: 1.2, v: 1.9, w: -2.2, h: -0.9, q: 0.5, theta: 2.1 },
+  { x: 0.35, y: 0.45, z: -0.25, t: 0.3, n: 2, p: 0.4, s: 0.25, r: 0.35, a: 0.45, b: -0.3, c: 0.2, lambda: 0.4, d: 0.3, k: 0.25, m: -0.35, u: 0.45, v: 0.15, w: 0.2, h: -0.3, q: 0.4, theta: 0.35 },
+  { x: -0.3, y: -0.25, z: 0.4, t: -0.35, n: 3, p: -0.45, s: 0.3, r: -0.2, a: -0.4, b: 0.25, c: -0.35, lambda: -0.3, d: -0.2, k: 0.45, m: 0.3, u: -0.15, v: -0.4, w: 0.35, h: 0.25, q: -0.3, theta: -0.25 },
+  { x: 0.15, y: 0.3, z: 0.15, t: 0.45, n: 4, p: 0.2, s: -0.35, r: 0.15, a: 0.25, b: 0.35, c: 0.45, lambda: 0.2, d: 0.4, k: -0.3, m: 0.15, u: 0.3, v: 0.45, w: -0.25, h: 0.4, q: 0.2, theta: 0.15 },
+  { x: -0.45, y: 0.2, z: -0.4, t: -0.15, n: 5, p: -0.25, s: 0.45, r: -0.45, a: 0.35, b: -0.2, c: 0.3, lambda: -0.45, d: -0.35, k: 0.15, m: -0.2, u: -0.4, v: 0.25, w: 0.45, h: -0.15, q: -0.45, theta: -0.4 },
 ];
 
 /** "L=R" split into its two sides, or null when the string is not one equation. */
@@ -863,6 +875,18 @@ const valuesEquivalent = async (a: string, b: string): Promise<boolean> => {
 };
 
 /**
+ * "2±3i" is the pair "2+3i, 2-3i", so a learner who lists the two roots has
+ * given the stored answer and one who writes ± has given the stored list.
+ * Only a single ± with no list around it is expanded.
+ */
+const expandPlusMinus = (input: string): string[] | null => {
+  const idx = input.indexOf("\u00b1");
+  if (idx === -1 || idx !== input.lastIndexOf("\u00b1") || input.includes(",")) return null;
+  if (idx === input.length - 1) return null;
+  return [input.replace("\u00b1", "+"), input.replace("\u00b1", "-")];
+};
+
+/**
  * Compare comma-separated answers such as "1,-1" — the two roots of a problem
  * with no natural order, which a learner may list either way round.
  *
@@ -882,7 +906,13 @@ const listsEquivalent = async (aParts: string[], bParts: string[]): Promise<bool
   const ordered = await Promise.all(aParts.map((part, i) => partsEquivalent(part, bParts[i])));
   if (ordered.every(Boolean)) return true;
 
-  if ([...aParts, ...bParts].some((part) => part.includes("="))) return false;
+  // Labels fix the order only when they differ: "x=3, x=-3" names the same
+  // unknown twice, so "x=-3, x=3" is the same pair of roots, while "x=3, y=-1"
+  // against "x=-1, y=3" is a different point.
+  const families = new Set(
+    [...aParts, ...bParts].map((part) => labelFamilyOf(part)).filter((f): f is string => f !== null),
+  );
+  if (families.size > 1) return false;
 
   const unmatched = [...bParts];
   for (const part of aParts) {
@@ -908,8 +938,13 @@ export const isAnswerCorrectAsync = async (userInput: string, expected: string) 
   const b = normalizeAnswer(expected);
   if (await valuesEquivalent(a, b)) return true;
 
-  const aParts = splitTopLevelList(a);
-  const bParts = splitTopLevelList(b);
+  // Lists are split with every label still in place, so that "x=3, y=-1"
+  // keeps both of its labels for the order check below; each part drops its
+  // own label when it is compared.
+  const aList = canonicalizeInput(userInput, true);
+  const bList = canonicalizeInput(expected, true);
+  const aParts = splitTopLevelList(aList) ?? expandPlusMinus(aList);
+  const bParts = splitTopLevelList(bList) ?? expandPlusMinus(bList);
   if (aParts && bParts) return listsEquivalent(aParts, bParts);
 
   return false;

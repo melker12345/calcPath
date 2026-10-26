@@ -235,9 +235,20 @@ insertion; numbers are not.
 This is why every numbered environment should carry a `[Title]`. An untitled
 theorem cannot be referred to at all.
 
-(If you want "by Theorem 4.2" to work, it needs a `[ref](#anchor-id)` form that
-resolves an anchor to the live number at render time. The `{#id}` anchors already
-exist for it. Until that is built, titles are the only safe form.)
+A citation written this way is **live**: at render time `Theorem *Title*` (or
+`the theorem *Title*`, any of theorem, lemma, corollary, proposition,
+definition, example, method) becomes a link to the statement, and the link's
+tooltip carries the number the reader sees on the page — "Theorem 4.2" — so
+the number is never typed into the prose and never goes stale. The target may
+be in another chapter of the same subject. A titled statement without an
+explicit `{#id}` gets a slug of its title as its anchor.
+
+The flip side is that the title must be exact: `npm run content:validate`
+fails on a citation whose title matches no statement anywhere in the corpus.
+Copy the `[Title]` from the fence rather than paraphrasing it, and keep the
+spelling and dashes (`Heine–Borel`, not `Heine-Borel`). Lower-case emphasis
+after the word "theorem" ("Green's theorem *is* Stokes' theorem") is not read
+as a citation.
 
 ## 5. Keep the structural invariants
 

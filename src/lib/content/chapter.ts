@@ -9,7 +9,8 @@ import "server-only";
 
 import { getAvailableSubjectConfigs, loadSubjectIndex } from "./loader";
 import { hasProblemSet } from "./problemset-loader";
-import { renderChapter, type RenderedChapter } from "./render-chapter";
+import { collectStatementTitles, normalizeTitle } from "./crossrefs";
+import { renderChapter, type ExternalRefs, type RenderedChapter } from "./render-chapter";
 import type { Topic } from "./schema";
 
 export type Chapter = {
@@ -37,6 +38,28 @@ async function readModuleSource(slug: string, topicId: string): Promise<string |
   }
 }
 
+/**
+ * Statement titles of every other chapter in the subject, so that "the theorem
+ * *Heine–Borel* of *Limits and Continuity*" links across chapters. A title
+ * used by two chapters resolves to the earlier one in reading order.
+ */
+async function loadExternalRefs(slug: string, topics: Topic[], current: string): Promise<ExternalRefs> {
+  const refs: ExternalRefs = new Map();
+  for (const topic of topics) {
+    if (topic.id === current) continue;
+    const source = await readModuleSource(slug, topic.id);
+    if (!source) continue;
+    for (const statement of collectStatementTitles(source)) {
+      if (statement.kind === "figure") continue;
+      const key = normalizeTitle(statement.title);
+      if (refs.has(key)) continue;
+      const label = statement.kind.charAt(0).toUpperCase() + statement.kind.slice(1);
+      refs.set(key, { href: `/${slug}/modules/${topic.id}#${statement.id}`, label: `${label}, ${topic.title}` });
+    }
+  }
+  return refs;
+}
+
 export async function loadChapter(slug: string, topicId: string): Promise<Chapter | null> {
   let index;
   try {
@@ -58,7 +81,7 @@ export async function loadChapter(slug: string, topicId: string): Promise<Chapte
     prev: position > 0 ? topics[position - 1] : null,
     next: position < topics.length - 1 ? topics[position + 1] : null,
     hasProblemSet: await hasProblemSet(slug, topicId),
-    rendered: renderChapter(source, position + 1),
+    rendered: renderChapter(source, position + 1, await loadExternalRefs(slug, topics, topicId)),
   };
 }
 
