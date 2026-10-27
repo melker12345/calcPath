@@ -10,6 +10,7 @@ import {
 import type { SubjectIndex } from "@/lib/content/schema";
 import { listTopicsWithProblemSets } from "@/lib/content/problemset-loader";
 import { renderMathText } from "@/lib/content/render-math";
+import { JsonLd, breadcrumbJsonLd, clampDescription, pageMetadata } from "@/lib/seo";
 
 type Props = {
   params: Promise<{ subject: string }>;
@@ -24,32 +25,17 @@ export const dynamicParams = false;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { subject: slug } = await params;
-  const canonical = `https://calc-path.com/${slug}`;
   try {
     const idx = await loadSubjectIndex(slug);
-    return {
-      title: `Learn ${idx.label} — Free University Course | CalcPath`,
-      description: idx.shortDescription,
-      alternates: { canonical },
-      // Full openGraph block: metadata shallow-merge means a partial override
-      // would drop the root's images/siteName/type/locale entirely.
-      openGraph: {
-        title: idx.ogTitle || `Learn ${idx.label} — Free | CalcPath`,
-        description: idx.ogDescription || idx.shortDescription,
-        url: canonical,
-        siteName: "CalcPath",
-        images: [
-          {
-            url: "/og-image.png",
-            width: 1200,
-            height: 630,
-            alt: "CalcPath — Learn math step by step",
-          },
-        ],
-        type: "website",
-        locale: "en_US",
-      },
-    };
+    return pageMetadata({
+      title: `Learn ${idx.label} — Free University Course`,
+      description: clampDescription(
+        idx.shortDescription,
+        `Textbook chapters with proofs and worked examples, graded practice and printable problem sets.`,
+      ),
+      path: `/${slug}`,
+      keywords: idx.keywords,
+    });
   } catch {
     return { title: "Not Found", robots: { index: false, follow: false } };
   }
@@ -86,7 +72,7 @@ export default async function SubjectHome({ params }: Props) {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(courseJsonLd) }} />
+      <JsonLd data={[courseJsonLd, breadcrumbJsonLd([{ name: idx.label, path: `/${slug}` }])]} />
       <CourseContentsPage
         title={idx.label}
         description={idx.shortDescription}

@@ -12,9 +12,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   } catch {
     // minimal fallback
   }
+  // Pages below set absolute titles and their own canonical/Open Graph via
+  // pageMetadata; this is only the fallback.
   return {
-    title: `Chapter Test — ${label} | CalcPath`,
-    description: `Printable chapter problem sheets for ${label}, with full worked solutions.`,
+    title: { default: `Problem Sets — ${label} | CalcPath`, template: "%s | CalcPath" },
+    description: `Printable ${label.toLowerCase()} problem sets, with full worked solutions.`,
   };
 }
 

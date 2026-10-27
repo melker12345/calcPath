@@ -18,6 +18,8 @@ import { preloadKatexFonts } from "@/lib/katex-assets";
 import { ProblemSheet } from "@/components/problem-sheet";
 import { loadSubjectIndex } from "@/lib/content/loader";
 import { listAllProblemSetParams, loadProblemSet, problemSetMinutes } from "@/lib/content/problemset-loader";
+import { JsonLd, breadcrumbJsonLd, clampDescription, learningResourceJsonLd, pageMetadata } from "@/lib/seo";
+import { lastModified, topicPaths } from "@/lib/content/last-modified";
 
 type Props = {
   params: Promise<{ subject: string; topicId: string }>;
@@ -35,11 +37,25 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!set) {
     return { title: "Not Found", robots: { index: false, follow: false } };
   }
-  return {
-    title: `${set.title} — Printable Chapter Test`,
-    description: `A printable problem sheet for ${set.title}. Work it on paper; full worked solutions on a separate page.`,
-    alternates: { canonical: `https://calc-path.com/${slug}/test/${topicId}` },
-  };
+  const subjectLabel = await subjectLabelOf(slug);
+  return pageMetadata({
+    title: `${set.title} Problem Set — ${subjectLabel}`,
+    description: sheetDescription(set.title, subjectLabel),
+    path: `/${slug}/test/${topicId}`,
+  });
+}
+
+const sheetDescription = (title: string, subjectLabel: string) =>
+  clampDescription(
+    `A printable ${subjectLabel.toLowerCase()} problem set on ${title.toLowerCase()}. Work it on paper, then check every step against the full worked solutions.`,
+  );
+
+async function subjectLabelOf(slug: string): Promise<string> {
+  try {
+    return (await loadSubjectIndex(slug)).label;
+  } catch {
+    return slug;
+  }
 }
 
 export default async function ChapterTestPage({ params }: Props) {
@@ -58,7 +74,26 @@ export default async function ChapterTestPage({ params }: Props) {
     notFound();
   }
 
+  const path = `/${slug}/test/${topicId}`;
   return (
+    <>
+      <JsonLd
+        data={[
+          breadcrumbJsonLd([
+            { name: subjectLabel, path: `/${slug}` },
+            { name: set.title, path: `/${slug}/modules/${topicId}` },
+            { name: "Problem set", path },
+          ]),
+          learningResourceJsonLd({
+            name: `${set.title} Problem Set — ${subjectLabel}`,
+            description: sheetDescription(set.title, subjectLabel),
+            path,
+            resourceType: "problem set",
+            subject: { slug, label: subjectLabel },
+            modifiedTime: lastModified(topicPaths(slug, topicId).problemSet),
+          }),
+        ]}
+      />
     <ProblemSheet
       subjectSlug={slug}
       subjectLabel={subjectLabel}
@@ -66,5 +101,6 @@ export default async function ChapterTestPage({ params }: Props) {
       set={set}
       totalMinutes={problemSetMinutes(set)}
     />
+    </>
   );
 }

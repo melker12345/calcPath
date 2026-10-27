@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { ChapterPage } from "@/components/chapter-page";
 import { listChapterParams, loadChapter } from "@/lib/content/chapter";
 import { preloadKatexFonts } from "@/lib/katex-assets";
+import { JsonLd, breadcrumbJsonLd, clampDescription, learningResourceJsonLd, pageMetadata } from "@/lib/seo";
+import { lastModified, topicPaths } from "@/lib/content/last-modified";
+import type { Chapter } from "@/lib/content/chapter";
 
 type Props = { params: Promise<{ subject: string; topicId: string }> };
 
@@ -21,28 +24,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const chapter = await loadChapter(slug, topicId);
   if (!chapter) return { title: "Not Found", robots: { index: false, follow: false } };
 
-  const title = `${chapter.subject.label} — ${chapter.topic.title}`;
-  const description =
-    chapter.topic.description ||
-    `${chapter.topic.title}: definitions, theorems, worked examples and practice in ${chapter.subject.label}.`;
-  const canonical = `https://calc-path.com/${slug}/modules/${topicId}`;
-  return {
-    // The parent [subject] layout's title template appends " | CalcPath".
-    title,
-    description,
-    alternates: { canonical },
-    // Full openGraph block: metadata shallow-merge means a partial override
-    // would drop the root's images/siteName/type/locale entirely.
-    openGraph: {
-      title: `${title} | CalcPath`,
-      description,
-      url: canonical,
-      siteName: "CalcPath",
-      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "CalcPath — Learn math step by step" }],
-      type: "article",
-      locale: "en_US",
-    },
-  };
+  return pageMetadata({
+    // Topic first: it is what the searcher typed.
+    title: `${chapter.topic.title} — ${chapter.subject.label}`,
+    description: chapterDescription(chapter),
+    path: `/${slug}/modules/${topicId}`,
+    type: "article",
+    modifiedTime: lastModified(topicPaths(slug, topicId).chapter),
+  });
+}
+
+/** The chapter abstract from index.json, cut or padded to snippet length. */
+function chapterDescription(chapter: Chapter): string {
+  return clampDescription(
+    chapter.topic.description,
+    `Definitions, theorems, proofs and worked examples in ${chapter.subject.label}, with practice problems.`,
+  );
 }
 
 export default async function ChapterRoute({ params }: Props) {
@@ -50,5 +47,26 @@ export default async function ChapterRoute({ params }: Props) {
   const { subject: slug, topicId } = await params;
   const chapter = await loadChapter(slug, topicId);
   if (!chapter) notFound();
-  return <ChapterPage chapter={chapter} />;
+  const path = `/${slug}/modules/${topicId}`;
+  return (
+    <>
+      <JsonLd
+        data={[
+          breadcrumbJsonLd([
+            { name: chapter.subject.label, path: `/${slug}` },
+            { name: chapter.topic.title, path },
+          ]),
+          learningResourceJsonLd({
+            name: `${chapter.topic.title} — ${chapter.subject.label}`,
+            description: chapterDescription(chapter),
+            path,
+            resourceType: "textbook chapter",
+            subject: chapter.subject,
+            modifiedTime: lastModified(topicPaths(slug, topicId).chapter),
+          }),
+        ]}
+      />
+      <ChapterPage chapter={chapter} />
+    </>
+  );
 }

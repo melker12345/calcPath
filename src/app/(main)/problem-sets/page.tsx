@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { listAllProblemSets } from "@/lib/content/problemset-loader";
+import { pageMetadata } from "@/lib/seo";
 
 /**
  * /problem-sets — the catalogue of printable problem sets.
@@ -14,12 +15,12 @@ import { listAllProblemSets } from "@/lib/content/problemset-loader";
  * folder adds it here with no code change.
  */
 
-export const metadata: Metadata = {
-  title: "Problem Sets — Printable Chapter Tests | CalcPath",
+export const metadata: Metadata = pageMetadata({
+  title: "Printable Problem Sets — University Mathematics",
   description:
-    "Printable problem sets for university mathematics. Work each sheet on paper, then check your route against full worked solutions on a separate page.",
-  alternates: { canonical: "https://calc-path.com/problem-sets" },
-};
+    "Free printable problem sets for every CalcPath chapter. Work each sheet on paper, then check your working against full step-by-step solutions.",
+  path: "/problem-sets",
+});
 
 export default async function ProblemSetsPage() {
   const groups = await listAllProblemSets();

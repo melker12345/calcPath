@@ -3,14 +3,18 @@ import { preloadKatexFonts } from "@/lib/katex-assets";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  deriveModuleStructureFromBundle,
   getDiscoveredSubjectSlugs,
   getFileSystemContentBundle,
   loadSubjectIndex,
 } from "@/lib/content/loader";
+import { renderMathText } from "@/lib/content/render-math";
 import { GenericPracticeExperience } from "@/components/generic-practice-experience";
 import { hasProblemSet } from "@/lib/content/problemset-loader";
 import { renderProblem } from "@/lib/content/render-practice";
 import { PracticeErrorBoundary } from "@/components/practice/PracticeErrorBoundary";
+import { JsonLd, breadcrumbJsonLd, learningResourceJsonLd, pageMetadata } from "@/lib/seo";
+import { lastModified, topicPaths } from "@/lib/content/last-modified";
 
 interface Props {
   params: Promise<{ subject: string; topicId: string }>;
@@ -40,7 +44,6 @@ export async function generateStaticParams(): Promise<Array<{ subject: string; t
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { subject: slug, topicId } = await params;
-  const canonical = `https://calc-path.com/${slug}/practice/${topicId}`;
   let subjectLabel = slug;
   let topicTitle = topicId;
   try {
@@ -51,23 +54,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   } catch {
     // minimal fallback
   }
-  const title = `${topicTitle} Practice Problems — ${subjectLabel}`;
-  const description = `Free ${subjectLabel.toLowerCase()} practice problems on ${topicTitle.toLowerCase()}, with instant feedback and full step-by-step solutions.`;
-  return {
-    title,
-    description,
-    alternates: { canonical },
-    openGraph: {
-      title: `${title} | CalcPath`,
-      description,
-      url: canonical,
-      siteName: "CalcPath",
-      images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "CalcPath — Learn math step by step" }],
-      type: "website",
-      locale: "en_US",
-    },
-  };
+  return pageMetadata({
+    title: `${topicTitle} Practice Problems — ${subjectLabel}`,
+    description: practiceDescription(subjectLabel, topicTitle),
+    path: `/${slug}/practice/${topicId}`,
+  });
 }
+
+const practiceDescription = (subjectLabel: string, topicTitle: string) =>
+  `Free ${subjectLabel.toLowerCase()} practice problems on ${topicTitle.toLowerCase()}, graded instantly, each with a hint and a full step-by-step solution.`;
 
 export default async function PracticePage({ params }: Props) {
   preloadKatexFonts();
@@ -109,16 +104,114 @@ export default async function PracticePage({ params }: Props) {
   const currentIdx = orderedTopics.findIndex((t) => t.id === topicId);
   const nextTopic = currentIdx >= 0 && currentIdx < orderedTopics.length - 1 ? orderedTopics[currentIdx + 1] : null;
 
+  const path = `/${subjectSlug}/practice/${topicId}`;
+  const hasSheet = await hasProblemSet(subjectSlug, topicId);
   return (
+    <>
     <PracticeErrorBoundary subjectSlug={subjectSlug} topicId={topicId}>
+      <JsonLd
+        data={[
+          breadcrumbJsonLd([
+            { name: bundle.config.label, path: `/${subjectSlug}` },
+            { name: topic.title, path: `/${subjectSlug}/modules/${topicId}` },
+            { name: "Practice", path },
+          ]),
+          learningResourceJsonLd({
+            name: `${topic.title} Practice Problems — ${bundle.config.label}`,
+            description: practiceDescription(bundle.config.label, topic.title),
+            path,
+            resourceType: "practice problems",
+            subject: { slug: subjectSlug, label: bundle.config.label },
+            modifiedTime: lastModified(topicPaths(subjectSlug, topicId).practice),
+          }),
+        ]}
+      />
       <GenericPracticeExperience
         subjectSlug={subjectSlug}
         topic={topic}
         problems={topicProblems.map(renderProblem)}
         subjectLabel={bundle.config.label}
         nextTopic={nextTopic ? { id: nextTopic.id, title: nextTopic.title } : undefined}
-        hasProblemSet={await hasProblemSet(subjectSlug, topicId)}
+        hasProblemSet={hasSheet}
       />
     </PracticeErrorBoundary>
+    <PracticeSummary
+      subjectSlug={subjectSlug}
+      subjectLabel={bundle.config.label}
+      topic={topic}
+      problems={topicProblems}
+      sections={(await deriveModuleStructureFromBundle(subjectSlug)).find((m) => m.topicId === topicId)?.sections ?? []}
+      hasProblemSet={hasSheet}
+    />
+    </>
+  );
+}
+
+/**
+ * What this practice set contains, rendered on the server so that the page
+ * says something to a reader (and a crawler) before any question is answered:
+ * the count per section in chapter order, the difficulty split, and where
+ * the chapter and the printable sheet are. The interactive part above knows
+ * all this only after hydration.
+ */
+function PracticeSummary({
+  subjectSlug,
+  subjectLabel,
+  topic,
+  problems,
+  sections,
+  hasProblemSet,
+}: {
+  subjectSlug: string;
+  subjectLabel: string;
+  topic: { id: string; title: string; description: string };
+  problems: Array<{ section: string; difficulty: string }>;
+  sections: Array<{ title: string; section?: string }>;
+  hasProblemSet: boolean;
+}) {
+  const bySection = new Map<string, number>();
+  for (const p of problems) bySection.set(p.section, (bySection.get(p.section) ?? 0) + 1);
+  const rows = sections
+    .filter((s) => s.section && bySection.has(s.section))
+    .map((s) => ({ slug: s.section!, title: s.title, count: bySection.get(s.section!)! }));
+  const count = (d: string) => problems.filter((p) => p.difficulty === d).length;
+  return (
+    <section aria-labelledby="practice-summary" className="mx-auto max-w-3xl px-4 pb-12 pt-6 sm:px-6">
+      <h2 id="practice-summary" className="text-lg font-semibold theme-text">
+        About these {problems.length} questions
+      </h2>
+      <p className="mt-2 text-sm theme-text-secondary sm:text-base">
+        {topic.description} This set covers the chapter{" "}
+        <Link prefetch={false} href={`/${subjectSlug}/modules/${topic.id}`} className="underline underline-offset-2">
+          {topic.title}
+        </Link>{" "}
+        in {subjectLabel}: {count("easy")} easy, {count("medium")} medium and {count("hard")} hard questions, each graded
+        instantly with a hint and a full step-by-step solution. Progress is saved in this browser only.
+      </p>
+      {rows.length > 0 && (
+        <ul className="mt-3 text-sm theme-text-secondary sm:text-base">
+          {rows.map((r) => (
+            <li key={r.slug}>
+              <Link
+                prefetch={false}
+                href={`/${subjectSlug}/modules/${topic.id}#${r.slug}`}
+                className="underline underline-offset-2"
+                dangerouslySetInnerHTML={{ __html: renderMathText(r.title) }}
+              />{" "}
+              — {r.count} {r.count === 1 ? "question" : "questions"}
+            </li>
+          ))}
+        </ul>
+      )}
+      {hasProblemSet && (
+        <p className="mt-3 text-sm theme-text-secondary sm:text-base">
+          For work on paper there is a{" "}
+          <Link prefetch={false} href={`/${subjectSlug}/test/${topic.id}`} className="underline underline-offset-2">
+            printable problem set
+          </Link>{" "}
+          with separate worked solutions.
+        </p>
+      )}
+    </section>
   );
 }

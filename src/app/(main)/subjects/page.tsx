@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { getAvailableSubjectConfigs } from "@/lib/content/loader";
 import { SubjectCard } from "@/components/subject-card";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "All Subjects",
+export const metadata: Metadata = pageMetadata({
+  title: "All Subjects — Free University Math Courses",
   description:
-    "Browse every free CalcPath course — calculus, linear algebra, statistics, and more — with step-by-step chapters and practice problems.",
-  alternates: { canonical: "https://calc-path.com/subjects" },
-};
+    "Browse every free CalcPath course — calculus, linear algebra, statistics, abstract algebra, logic and more — with textbook chapters and graded practice.",
+  path: "/subjects",
+});
 
 /**
  * Card blurb derived from the subject's shortDescription at render time only —

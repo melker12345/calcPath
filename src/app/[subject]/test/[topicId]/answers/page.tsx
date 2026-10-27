@@ -13,6 +13,7 @@ import { preloadKatexFonts } from "@/lib/katex-assets";
 import { AnswerSheet } from "@/components/problem-sheet";
 import { loadSubjectIndex } from "@/lib/content/loader";
 import { listAllProblemSetParams, loadProblemSet, problemSetMinutes } from "@/lib/content/problemset-loader";
+import { JsonLd, breadcrumbJsonLd, pageMetadata } from "@/lib/seo";
 
 type Props = {
   params: Promise<{ subject: string; topicId: string }>;
@@ -30,11 +31,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!set) {
     return { title: "Not Found", robots: { index: false, follow: false } };
   }
-  return {
-    title: `${set.title} — Solutions`,
-    description: `Full worked solutions to the ${set.title} problem sheet.`,
-    alternates: { canonical: `https://calc-path.com/${slug}/test/${topicId}/answers` },
-  };
+  let subjectLabel = slug;
+  try {
+    subjectLabel = (await loadSubjectIndex(slug)).label;
+  } catch {
+    // keep the slug
+  }
+  return pageMetadata({
+    title: `${set.title} Problem Set Solutions — ${subjectLabel}`,
+    description: `Full worked solutions, step by step, to every problem on the ${set.title.toLowerCase()} problem set in ${subjectLabel.toLowerCase()}.`,
+    path: `/${slug}/test/${topicId}/answers`,
+  });
 }
 
 export default async function ChapterTestAnswersPage({ params }: Props) {
@@ -54,6 +61,15 @@ export default async function ChapterTestAnswersPage({ params }: Props) {
   }
 
   return (
+    <>
+      <JsonLd
+        data={breadcrumbJsonLd([
+          { name: subjectLabel, path: `/${slug}` },
+          { name: set.title, path: `/${slug}/modules/${topicId}` },
+          { name: "Problem set", path: `/${slug}/test/${topicId}` },
+          { name: "Solutions", path: `/${slug}/test/${topicId}/answers` },
+        ])}
+      />
     <AnswerSheet
       subjectSlug={slug}
       subjectLabel={subjectLabel}
@@ -61,5 +77,6 @@ export default async function ChapterTestAnswersPage({ params }: Props) {
       set={set}
       totalMinutes={problemSetMinutes(set)}
     />
+    </>
   );
 }

@@ -28,7 +28,7 @@ export const metadata = buildLandingMetadata({
   path: "/",
   title: "CalcPath — Free University Math: Calculus, Linear Algebra & Statistics",
   description:
-    "Learn university mathematics free with CalcPath: clear derivation-first chapters, worked examples, and practice problems with full step-by-step solutions for calculus, linear algebra, statistics and more. No account required.",
+    "Free university mathematics: derivation-first textbook chapters, worked examples and graded practice with full solutions, from calculus to statistics.",
 });
 
 /**

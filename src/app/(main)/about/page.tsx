@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getAvailableSubjectConfigs } from "@/lib/content/loader";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata: Metadata = {
-  title: "About | CalcPath",
+export const metadata: Metadata = pageMetadata({
+  title: "About CalcPath — Free University Mathematics",
   description:
-    "What CalcPath is, how the courses are structured and written, how practice grading and progress work, and a curated list of external resources for learning university mathematics.",
-  alternates: { canonical: "https://calc-path.com/about" },
-};
+    "What CalcPath is, how its chapters are written, how practice grading and progress work, and a curated list of external resources for university mathematics.",
+  path: "/about",
+});
 
 /** External link with consistent styling + safe attributes. */
 function Ext({ href, children }: { href: string; children: React.ReactNode }) {
