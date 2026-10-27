@@ -10,8 +10,10 @@
  * their order is never meaningful.
  *
  * A predicate-logic answer (quantifiers, or predicate applications such as
- * P(x)) has no truth table; it is compared after renaming its bound
- * variables in order of binding, so "∀y¬P(y)" is "∀x¬P(x)".
+ * P(x)) has no truth table; it is compared structurally after renaming its
+ * bound variables in order of binding, reordering the operands of ∧ and ∨,
+ * and treating a block of same-kind quantifiers as unordered, so "∀y¬P(y)" is
+ * "∀x¬P(x)" and "∃x(∀y¬Q(x,y)∧P(x))" is "∃x(P(x)∧∀y¬Q(x,y))" (report 1d69a3d0).
  *
  * Inputs are canonical strings from answer-check (lower case, no spaces,
  * LaTeX folded to the symbols ¬ ∧ ∨ → ↔ ↑ ∀ ∃).
@@ -186,8 +188,8 @@ export function propositionalEquivalent(typed: string, stored: string): boolean 
 
 /**
  * Rename each quantified variable, in order of binding, to a canonical name,
- * applying the renaming to every later occurrence of that letter. Exact for
- * prenex and other simple formulas, which is what the question bank holds.
+ * applying the renaming to every later occurrence of that letter. The
+ * fallback for a formula the predicate parser cannot read.
  */
 export function alphaNormalize(s: string): string {
   let out = "";
@@ -211,7 +213,159 @@ export function alphaNormalize(s: string): string {
   return out;
 }
 
+export type Term = { name: string; args: Term[] };
+export type PFormula =
+  | { kind: "atom"; name: string; args: Term[] }
+  | { kind: "not"; a: PFormula }
+  | { kind: "bin"; op: "∧" | "∨" | "→" | "↔" | "↑"; a: PFormula; b: PFormula }
+  | { kind: "quant"; q: "∀" | "∃"; v: string; a: PFormula };
+
+/**
+ * Parser for first-order formulas in the grader's canonical spelling: atoms
+ * are predicate applications "p(x,f(y))" or bare propositional letters, and
+ * a quantifier binds the atom that follows it ("∀x∃y(...)", "∀x¬p(x)").
+ */
+export function parsePredicate(src: string): PFormula | null {
+  let i = 0;
+  const eat = (c: string) => {
+    if (src[i] === c) {
+      i += 1;
+      return true;
+    }
+    return false;
+  };
+  const name = (): string | null => {
+    if (!/[a-z]/.test(src[i] ?? "")) return null;
+    let n = src[i++];
+    if (src[i] === "_") {
+      i += 1;
+      while (i < src.length && /[0-9a-z]/.test(src[i])) n += src[i++];
+    } else {
+      while (i < src.length && /[0-9]/.test(src[i])) n += src[i++];
+    }
+    return n;
+  };
+  const args = (): Term[] | null => {
+    if (!eat("(")) return [];
+    const out: Term[] = [];
+    for (;;) {
+      const t = term();
+      if (!t) return null;
+      out.push(t);
+      if (eat(",")) continue;
+      if (eat(")")) return out;
+      return null;
+    }
+  };
+  const term = (): Term | null => {
+    const n = name();
+    if (!n) return null;
+    const a = args();
+    return a ? { name: n, args: a } : null;
+  };
+  const atom = (): PFormula | null => {
+    if (eat("(")) {
+      const f = iff();
+      if (!f || !eat(")")) return null;
+      return f;
+    }
+    if (eat("¬") || eat("~") || eat("!")) {
+      const f = atom();
+      return f ? { kind: "not", a: f } : null;
+    }
+    if (src[i] === "∀" || src[i] === "∃") {
+      const q = src[i++] as "∀" | "∃";
+      const v = name();
+      if (!v) return null;
+      const f = atom();
+      return f ? { kind: "quant", q, v, a: f } : null;
+    }
+    const n = name();
+    if (!n) return null;
+    const a = args();
+    return a ? { kind: "atom", name: n, args: a } : null;
+  };
+  const chain = (next: () => PFormula | null, ops: string[]): (() => PFormula | null) => () => {
+    let left = next();
+    if (!left) return null;
+    while (i < src.length && ops.includes(src[i])) {
+      const op = src[i] as "∧" | "∨" | "→" | "↔" | "↑";
+      i += 1;
+      const right = next();
+      if (!right) return null;
+      left = { kind: "bin", op, a: left, b: right };
+    }
+    return left;
+  };
+  const conj = chain(atom, ["∧"]);
+  const nand = chain(conj, ["↑"]);
+  const disj = chain(nand, ["∨"]);
+  const impl = chain(disj, ["→"]);
+  const iff = chain(impl, ["↔"]);
+  const f = iff();
+  if (!f || i !== src.length) return null;
+  return f;
+}
+
+const COMMUTATIVE = new Set(["∧", "∨", "↔", "↑"]);
+
+function permutations<T>(xs: T[]): T[][] {
+  if (xs.length <= 1) return [xs];
+  return xs.flatMap((x, k) => permutations([...xs.slice(0, k), ...xs.slice(k + 1)]).map((rest) => [x, ...rest]));
+}
+
+/**
+ * One string per equivalence class under: renaming bound variables,
+ * reordering and regrouping the operands of ∧ and ∨ (and ↔, ↑), and
+ * permuting a block of adjacent quantifiers of the same kind. Bound
+ * variables are named by position; a block tries every order and keeps the
+ * smallest body, so "∃x∃z(p(x)→q(z))" and "∃z∃x(p(x)→q(z))" agree.
+ */
+export function canonicalPredicate(f: PFormula, env: Map<string, string> = new Map(), depth = 0): string {
+  const termStr = (t: Term): string =>
+    (env.get(t.name) ?? t.name) + (t.args.length ? `(${t.args.map(termStr).join(",")})` : "");
+  switch (f.kind) {
+    case "atom":
+      return f.name + (f.args.length ? `(${f.args.map(termStr).join(",")})` : "");
+    case "not":
+      return "¬" + canonicalPredicate(f.a, env, depth);
+    case "quant": {
+      const vars: string[] = [];
+      let body: PFormula = f;
+      while (body.kind === "quant" && body.q === f.q && vars.length < 5) {
+        vars.push(body.v);
+        body = body.a;
+      }
+      let best: string | null = null;
+      for (const order of permutations(vars)) {
+        const inner = new Map(env);
+        order.forEach((v, k) => inner.set(v, `#${depth + k}`));
+        const s = canonicalPredicate(body, inner, depth + order.length);
+        if (best === null || s < best) best = s;
+      }
+      return f.q.repeat(vars.length) + best;
+    }
+    case "bin": {
+      if (!COMMUTATIVE.has(f.op)) {
+        return `(${canonicalPredicate(f.a, env, depth)}${f.op}${canonicalPredicate(f.b, env, depth)})`;
+      }
+      const operands: PFormula[] = [];
+      const collect = (g: PFormula) => {
+        if (g.kind === "bin" && g.op === f.op && f.op !== "↑") {
+          collect(g.a);
+          collect(g.b);
+        } else operands.push(g);
+      };
+      collect(f);
+      return `(${operands.map((g) => canonicalPredicate(g, env, depth)).sort().join(f.op)})`;
+    }
+  }
+}
+
 export function predicateEquivalent(typed: string, stored: string): boolean {
+  const a = parsePredicate(typed);
+  const b = parsePredicate(stored);
+  if (a && b) return canonicalPredicate(a) === canonicalPredicate(b);
   return alphaNormalize(typed) === alphaNormalize(stored);
 }
 
