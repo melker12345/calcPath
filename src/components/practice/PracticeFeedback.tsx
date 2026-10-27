@@ -32,8 +32,10 @@ interface PracticeFeedbackProps {
  *
  * - correct       → a card with the worked steps, the answer and Next. It
  *                   takes the place of the input.
- * - showSolution  → the same card, headed "Not quite", after the learner gave
- *                   up or ran out of attempts. It also replaces the input.
+ * - showSolution  → the same card after the learner gave up or ran out of
+ *                   attempts, headed "Not quite" only when they actually
+ *                   submitted a wrong answer (report 7f7b5803). It also
+ *                   replaces the input.
  * - incorrect     → a compact banner with Hint / Solution / Skip, kept small
  *                   so the input stays visible and editable for a retry.
  *
@@ -80,7 +82,9 @@ export function PracticeFeedback({
             ? feedback.afterSolution
               ? "Correct, but the solution was already shown, so this one is not marked solved."
               : "Correct"
-            : "Not quite. Here is the solution."}
+            : feedback.attempts > 0
+              ? "Not quite. Here is the solution."
+              : "Here is the solution."}
         </p>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-5">
           {renderSteps()}
