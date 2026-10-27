@@ -38,7 +38,7 @@ export const metadata: Metadata = {
     siteName: "CalcPath",
     images: [
       {
-        url: "/og-image.png",
+        url: "/og-image.png?v=2",
         width: 1200,
         height: 630,
         alt: "CalcPath — Learn math step by step",
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     title: "CalcPath — Learn Math Step by Step",
     description:
       "Free university mathematics: textbook chapters, practice problems with full solutions, and printable problem sets.",
-    images: ["/og-image.png"],
+    images: ["/og-image.png?v=2"],
   },
   robots: {
     index: true,
@@ -101,7 +101,7 @@ export default function RootLayout({
                   "@id": "https://calc-path.com/#org",
                   name: "CalcPath",
                   url: "https://calc-path.com",
-                  logo: "https://calc-path.com/og-image.png",
+                  logo: "https://calc-path.com/og-image.png?v=2",
                 },
               ],
             }),

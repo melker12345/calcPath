@@ -104,7 +104,7 @@ export function buildLandingMetadata(opts: {
       url: canonicalUrl,
       siteName: "CalcPath",
       images: [
-        { url: "/og-image.png", width: 1200, height: 630, alt: "CalcPath — learn university math free" },
+        { url: "/og-image.png?v=2", width: 1200, height: 630, alt: "CalcPath — free university mathematics" },
       ],
       type: "website",
       locale: "en_US",
@@ -113,7 +113,7 @@ export function buildLandingMetadata(opts: {
       card: "summary_large_image",
       title: opts.title,
       description: opts.description,
-      images: ["/og-image.png"],
+      images: ["/og-image.png?v=2"],
     },
     robots: isCanonicalHome
       ? { index: true, follow: true }

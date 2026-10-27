@@ -16,7 +16,9 @@ import type { Metadata } from "next";
 export const SITE_URL = "https://calc-path.com";
 export const SITE_NAME = "CalcPath";
 
-const OG_IMAGE = { url: "/og-image.png", width: 1200, height: 630, alt: "CalcPath — Learn math step by step" };
+// The ?v= busts the caches of share scrapers when the image changes; the
+// source is design/og-image.svg (rsvg-convert -w 1200 -h 630).
+const OG_IMAGE = { url: "/og-image.png?v=2", width: 1200, height: 630, alt: "CalcPath — free university mathematics" };
 
 /** Search engines show about 155 characters of a description. */
 const DESCRIPTION_MAX = 158;
