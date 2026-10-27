@@ -55,8 +55,9 @@ function block(selector: string, p: SubjectAccent, mode: "light" | "dark"): stri
     `--subject-accent:${p.accent};--subject-accent-text:${p.accentText};` +
     `--nav-bg:color-mix(in srgb, ${p.accent} ${tint}%, var(--surface-solid));` +
     `--nav-border:color-mix(in srgb, ${p.accent} 42%, var(--border));` +
-    `--nav-control-bg:color-mix(in srgb, ${p.accent} 5%, var(--surface-solid));` +
-    `--nav-control-border:color-mix(in srgb, ${p.accent} 30%, var(--border));` +
+    // The search box, theme toggle and menu button have no border; they read
+    // as controls because their fill is one step deeper than the bar's.
+    `--nav-control-bg:color-mix(in srgb, ${p.accent} ${tint + 12}%, var(--surface-solid));` +
     `}`
   );
 }

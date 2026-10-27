@@ -277,7 +277,7 @@ export function SearchTrigger() {
     <button
       type="button"
       onClick={open}
-      className="flex items-center gap-2 border border-[var(--nav-control-border,var(--border))] bg-[var(--nav-control-bg,var(--surface))] px-3 py-1.5 text-sm theme-text-muted hover:underline"
+      className="flex items-center gap-2 bg-[var(--nav-control-bg,var(--surface-2))] px-3 py-1.5 text-sm theme-text-muted hover:underline"
     >
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" />

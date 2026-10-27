@@ -283,7 +283,7 @@ function SiteHeaderAuthControls({
         <button
           type="button"
           onClick={onToggleMobileMenu}
-          className="flex h-10 w-10 items-center justify-center border border-[var(--nav-control-border,var(--border))] bg-[var(--nav-control-bg,var(--surface))] theme-text-secondary"
+          className="flex h-10 w-10 items-center justify-center bg-[var(--nav-control-bg,var(--surface-2))] theme-text-secondary"
           aria-label="Toggle menu"
           aria-expanded={mobileMenuOpen}
         >
